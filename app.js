@@ -1,17 +1,19 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-// REPLACE WITH YOUR FIREBASE CONFIG
+// Your exact web app's Firebase configuration keys
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyCOZJWyQOoD2PF6jRPwB0vo14eKiPs0_RA",
+    authDomain: "dental-moderator.firebaseapp.com",
+    projectId: "dental-moderator",
+    storageBucket: "dental-moderator.firebasestorage.app",
+    messagingSenderId: "600867027414",
+    appId: "1:600867027414:web:f6fd0f6dd45bfe00d90c77",
+    measurementId: "G-MV7NXDYG5N"
 };
 
+// Initialize Modules
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -41,27 +43,38 @@ const Views = {
         </div>
     `,
     dashboard: async () => {
-        const appts = await getDocs(collection(db, "appointments"));
-        const patients = await getDocs(collection(db, "patients"));
+        let apptsSize = 0;
+        let patientsSize = 0;
+        try {
+            const appts = await getDocs(collection(db, "appointments"));
+            apptsSize = appts.size;
+            const patients = await getDocs(collection(db, "patients"));
+            patientsSize = patients.size;
+        } catch (e) {
+            console.log("Database tables initializing...");
+        }
         return `
             <div class="panel-header">
                 <h1>STATUS DECK // REALTIME DATA</h1>
                 <p style="color:var(--text-secondary)">Clinic diagnostic summary metrics.</p>
             </div>
             <div class="grid-stats">
-                <div class="card"><h3>Active Ops Scheduled</h3><div class="val">${appts.size}</div></div>
-                <div class="card"><h3>Total Registered Patients</h3><div class="val">${patients.size}</div></div>
+                <div class="card"><h3>Active Ops Scheduled</h3><div class="val">${apptsSize}</div></div>
+                <div class="card"><h3>Total Registered Patients</h3><div class="val">${patientsSize}</div></div>
                 <div class="card"><h3>Database Synchronizer</h3><div class="val" style="color:var(--neon-emerald)">CONNECTED</div></div>
             </div>
         `;
     },
     appointments: async () => {
-        const snapshot = await getDocs(collection(db, "appointments"));
         let rows = "";
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            rows += `<tr><td>${data.patientName}</td><td>${data.date}</td><td>${data.time}</td><td><span style="color:var(--neon-blue)">${data.status}</span></td></tr>`;
-        });
+        try {
+            const snapshot = await getDocs(collection(db, "appointments"));
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                rows += `<tr><td>${data.patientName}</td><td>${data.date}</td><td>${data.time}</td><td><span style="color:var(--neon-blue)">${data.status}</span></td></tr>`;
+            });
+        } catch (e) { console.error(e); }
+        
         return `
             <div class="panel-header"><h1>BOOKING MATRIX PROTOCOL</h1></div>
             <div class="card" style="margin-bottom: 2rem;">
@@ -83,12 +96,15 @@ const Views = {
         `;
     },
     patients: async () => {
-        const snapshot = await getDocs(collection(db, "patients"));
         let rows = "";
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            rows += `<tr><td>${data.idNumber}</td><td>${data.name}</td><td>${data.phone}</td><td>${data.medicalNote}</td></tr>`;
-        });
+        try {
+            const snapshot = await getDocs(collection(db, "patients"));
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                rows += `<tr><td>${data.idNumber}</td><td>${data.name}</td><td>${data.phone}</td><td>${data.medicalNote}</td></tr>`;
+            });
+        } catch(e) { console.error(e); }
+
         return `
             <div class="panel-header"><h1>EMR ELECTRONIC MEDICAL CORE</h1></div>
             <div class="card" style="margin-bottom:2rem;">
@@ -111,11 +127,13 @@ const Views = {
         `;
     },
     admin: async () => {
-        const apptSnap = await getDocs(collection(db, "appointments"));
         let apptRows = "";
-        apptSnap.forEach(d => {
-            apptRows += `<tr><td>${d.data().patientName}</td><td><button class="btn-primary btn-danger purge-btn" data-coll="appointments" data-id="${d.id}" style="padding: 4px 8px; font-size:0.75rem;">PURGE</button></td></tr>`;
-        });
+        try {
+            const apptSnap = await getDocs(collection(db, "appointments"));
+            apptSnap.forEach(d => {
+                apptRows += `<tr><td>${d.data().patientName}</td><td><button class="btn-primary btn-danger purge-btn" data-coll="appointments" data-id="${d.id}" style="padding: 4px 8px; font-size:0.75rem;">PURGE</button></td></tr>`;
+            });
+        } catch(e) { console.error(e); }
 
         return `
             <div class="panel-header"><h1>SYSOPS CORE CONTROL PANEL</h1><p style="color:var(--neon-rose)">ROOT ACCESS PRIVILEGES ENABLED</p></div>
@@ -144,7 +162,7 @@ async function switchView(target) {
     if (target === 'admin') {
         const challenge = prompt("Enter Master Technical Sysops Key Token:");
         if (challenge !== ADMIN_TOKEN) {
-            alert("SECURITY VIOLATION DETECTED // ACCESS ACCESS REJECTED");
+            alert("SECURITY VIOLATION DETECTED // ACCESS REJECTED");
             return;
         }
     }
@@ -156,7 +174,7 @@ async function switchView(target) {
     });
 
     viewLayer.innerHTML = await Views[target]();
-    lucide.createIcons();
+    if(typeof lucide !== 'undefined') lucide.createIcons();
     attachComponentEventListeners();
 }
 
@@ -170,34 +188,39 @@ function attachComponentEventListeners() {
 
     document.getElementById('appt-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        await addDoc(collection(db, "appointments"), {
-            patientName: document.getElementById('p-name').value,
-            date: document.getElementById('p-date').value,
-            time: document.getElementById('p-time').value,
-            status: "Scheduled Active"
-        });
-        switchView('appointments');
+        try {
+            await addDoc(collection(db, "appointments"), {
+                patientName: document.getElementById('p-name').value,
+                date: document.getElementById('p-date').value,
+                time: document.getElementById('p-time').value,
+                status: "Scheduled Active"
+            });
+            switchView('appointments');
+        } catch(err) { alert(err.message); }
     });
 
     document.getElementById('patient-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        await addDoc(collection(db, "patients"), {
-            idNumber: document.getElementById('emr-id').value,
-            name: document.getElementById('emr-name').value,
-            phone: document.getElementById('emr-phone').value,
-            medicalNote: document.getElementById('emr-note').value
-        });
-        switchView('patients');
+        try {
+            await addDoc(collection(db, "patients"), {
+                idNumber: document.getElementById('emr-id').value,
+                name: document.getElementById('emr-name').value,
+                phone: document.getElementById('emr-phone').value,
+                medicalNote: document.getElementById('emr-note').value
+            });
+            switchView('patients');
+        } catch(err) { alert(err.message); }
     });
 
-    // Admin Panel Actions Interceptor
     document.querySelectorAll('.purge-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const id = e.target.getAttribute('data-id');
             const collectionName = e.target.getAttribute('data-coll');
-            if(confirm("Confirm hard delete of node parameter target? Action is infinite.")) {
-                await deleteDoc(doc(db, collectionName, id));
-                switchView('admin');
+            if(confirm("Confirm hard delete of node parameter target? Action is permanent.")) {
+                try {
+                    await deleteDoc(doc(db, collectionName, id));
+                    switchView('admin');
+                } catch(err) { alert(err.message); }
             }
         });
     });
@@ -215,7 +238,7 @@ onAuthStateChanged(auth, async (user) => {
         viewLayer.innerHTML = Views.auth();
         attachComponentEventListeners();
     }
-    lucide.createIcons();
+    if(typeof lucide !== 'undefined') lucide.createIcons();
 });
 
 // Event Binding for Sidebar Navigation Control Core
