@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DentMod // Core Control Terminal</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div id="app-container">
+        <aside id="sidebar" class="hidden">
+            <div class="logo">
+                <i data-lucide="shield-alert" class="brand-icon"></i>
+                <h2>DentMod<span class="pulse">.</span></h2>
+            </div>
+            <nav>
+                <button class="nav-btn active" data-target="dashboard"><i data-lucide="terminal"></i> Status Deck</button>
+                <button class="nav-btn" data-target="appointments"><i data-lucide="calendar-days"></i> Booking Grid</button>
+                <button class="nav-btn" data-target="patients"><i data-lucide="folder-git"></i> EMR Core</button>
+                <button class="nav-btn admin-lock" data-target="admin"><i data-lucide="sliders"></i> Sysops Admin</button>
+                <button id="logout-btn" class="nav-btn logout"><i data-lucide="power"></i> Kill Session</button>
+            </nav>
+        </aside>
+
+        <main id="main-content">
+            <div id="view-layer"></div>
+        </main>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
