@@ -1,0 +1,65 @@
+:root {
+    --bg-dark: #090d16;
+    --bg-card: #111827;
+    --border-glow: #1f2937;
+    --text-primary: #f3f4f6;
+    --text-secondary: #9ca3af;
+    --neon-blue: #0ea5e9;
+    --neon-emerald: #10b981;
+    --neon-rose: #f43f5e;
+    --radius-lg: 16px;
+    --radius-md: 8px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace, system-ui; }
+body { background: var(--bg-dark); color: var(--text-primary); height: 100vh; overflow: hidden; }
+
+#app-container { display: flex; height: 100vh; width: 100vw; }
+
+/* Cyber Navigation Panel */
+aside { width: 280px; background: #030712; color: white; display: flex; flex-direction: column; padding: 2.5rem 1.25rem; border-right: 1px solid var(--border-glow); }
+aside.hidden { display: none !important; }
+
+.logo { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 3rem; font-weight: 800; letter-spacing: 1px; }
+.brand-icon { color: var(--neon-blue); filter: drop-shadow(0 0 8px var(--neon-blue)); }
+.pulse { color: var(--neon-rose); animation: blink 1.5s infinite; }
+
+nav { display: flex; flex-direction: column; gap: 0.75rem; flex-grow: 1; }
+.nav-btn { display: flex; align-items: center; gap: 1.25rem; background: transparent; border: none; color: var(--text-secondary); padding: 1rem 1.25rem; border-radius: var(--radius-md); cursor: pointer; text-align: left; font-size: 0.95rem; font-weight: 600; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.nav-btn:hover, .nav-btn.active { background: #111827; color: white; border-left: 4px solid var(--neon-blue); padding-left: 1.5rem; }
+.nav-btn.active { color: var(--neon-blue); }
+.nav-btn.admin-lock { border-left-color: var(--neon-rose); }
+.nav-btn.admin-lock:hover { color: var(--neon-rose); }
+.logout { margin-top: auto; border-left-color: var(--neon-rose) !important; }
+
+main { flex-grow: 1; padding: 3rem; overflow-y: auto; background: linear-gradient(135deg, #090d16 0%, #05070c 100%); }
+
+/* High-Tech Dynamic Components */
+.panel-header { margin-bottom: 2.5rem; border-bottom: 1px solid var(--border-glow); padding-bottom: 1rem; }
+.panel-header h1 { font-size: 2.25rem; font-weight: 700; letter-spacing: -0.05em; }
+
+.grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; }
+.card { background: var(--bg-card); border: 1px solid var(--border-glow); padding: 2rem; border-radius: var(--radius-lg); position: relative; overflow: hidden; box-shadow: 0 10px 30px -15px rgba(0,0,0,0.7); }
+.card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--neon-blue); }
+.card.admin-card::before { background: var(--neon-rose); }
+
+.card h3 { color: var(--text-secondary); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.75rem; }
+.card .val { font-size: 2.5rem; font-weight: 800; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.1); }
+
+/* Form Field Interactivity */
+.form-group { margin-bottom: 1.5rem; }
+.form-group label { display: block; margin-bottom: 0.5rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); }
+.form-group input, .form-group select { width: 100%; padding: 1rem; background: #030712; border: 1px solid var(--border-glow); color: white; border-radius: var(--radius-md); font-size: 1rem; transition: border 0.2s; }
+.form-group input:focus { border-color: var(--neon-blue); outline: none; }
+
+.btn-primary { width: 100%; padding: 1rem; background: var(--neon-blue); border: none; color: white; border-radius: var(--radius-md); font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: background 0.2s; }
+.btn-primary:hover { background: #0284c7; }
+.btn-danger { background: var(--neon-rose); }
+.btn-danger:hover { background: #e11d48; }
+
+/* Table Systems */
+.tech-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; text-align: left; }
+.tech-table th { padding: 1rem; color: var(--text-secondary); border-bottom: 2px solid var(--border-glow); font-size: 0.85rem; text-transform: uppercase; }
+.tech-table td { padding: 1rem; border-bottom: 1px solid var(--border-glow); font-size: 0.95rem; }
+
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
