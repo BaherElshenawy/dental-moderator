@@ -15,26 +15,43 @@
   🔥 FIREBASE — Replace FIREBASE_CONFIG with your project
 ════════════════════════════════════════════════════ -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, set, push, remove, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-// Replace this object with your actual Web App configuration snippet from the Firebase Console settings
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyCOZJWyQOoD2PF6jRPwB0vo14eKiPs0_RA",
-  authDomain: "dental-moderator.firebaseapp.com",
-  databaseURL: "https://dental-moderator-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "dental-moderator",
-  storageBucket: "dental-moderator.firebasestorage.app",
-  messagingSenderId: "600867027414",
-  appId: "1:600867027414:web:f6fd0f6dd45bfe00d90c77",
-  measurementId: "G-MV7NXDYG5N"
+const FIREBASE_CONFIG = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+  databaseURL:       "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID",
 };
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
- 
-
+try {
+  const app = initializeApp(FIREBASE_CONFIG);
+  const db  = getDatabase(app);
+  window.FB = {
+    addAppointment(d){ const r=push(ref(db,"appointments")); return set(r,{...d,fbId:r.key}); },
+    updateAppointment(id,d){ return update(ref(db,`appointments/${id}`),d); },
+    deleteAppointment(id){ return remove(ref(db,`appointments/${id}`)); },
+    watchAppointments(cb){ onValue(ref(db,"appointments"),s=>cb(Object.values(s.val()||{}))); },
+    addFinance(d){ const r=push(ref(db,"finance")); return set(r,{...d,fbId:r.key}); },
+    deleteFinance(id){ return remove(ref(db,`finance/${id}`)); },
+    watchFinance(cb){ onValue(ref(db,"finance"),s=>cb(Object.values(s.val()||{}))); },
+    saveSettings(d){ return set(ref(db,"settings"),d); },
+    watchSettings(cb){ onValue(ref(db,"settings"),s=>{ if(s.val()) cb(s.val()); }); },
+    addPatient(d){ const r=push(ref(db,"patients")); return set(r,{...d,fbId:r.key}); },
+    watchPatients(cb){ onValue(ref(db,"patients"),s=>cb(Object.values(s.val()||{}))); },
+    addInventoryItem(d){ const r=push(ref(db,"inventory")); return set(r,{...d,fbId:r.key}); },
+    updateInventoryItem(id,d){ return update(ref(db,`inventory/${id}`),d); },
+    deleteInventoryItem(id){ return remove(ref(db,`inventory/${id}`)); },
+    watchInventory(cb){ onValue(ref(db,"inventory"),s=>cb(Object.values(s.val()||{}))); },
+  };
+  window.FIREBASE_READY = true;
+  window.dispatchEvent(new Event("firebase-ready"));
+} catch(e){ console.warn("Firebase not configured:", e.message); }
+</script>
 
 <!-- ═══════════════════════════════════════════════════
   ⚙️ CLINIC CONFIG — All settings managed via Admin Panel (password: BoB2000)
@@ -1195,6 +1212,10 @@ function doLogin(){
   if(user){
     currentUser = user;
     errEl.classList.add("hidden");
+    // Persist session so app.js knows the user is authenticated
+    sessionStorage.setItem('currentUser', JSON.stringify({role: user.role, name: user.name}));
+    // Notify app.js
+    window.dispatchEvent(new Event('clinic-login'));
     document.getElementById("login-screen").style.display="none";
     document.getElementById("app").classList.add("visible");
     initApp();
@@ -1254,6 +1275,9 @@ function initApp(){
 
   document.getElementById("logout-btn").onclick = ()=>{
     currentUser=null; chatHistory=[]; chatApiHistory=[]; adminUnlocked=false;
+    // Clear session and notify app.js
+    sessionStorage.removeItem('currentUser');
+    window.dispatchEvent(new Event('clinic-logout'));
     document.getElementById("app").classList.remove("visible");
     document.getElementById("login-screen").style.display="flex";
     document.getElementById("inp-user").value="";
