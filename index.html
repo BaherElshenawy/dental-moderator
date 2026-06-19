@@ -19,13 +19,14 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getDatabase, ref, set, push, remove, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 const FIREBASE_CONFIG = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  databaseURL:       "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID",
+  apiKey: "AIzaSyCOZJWyQOoD2PF6jRPwB0vo14eKiPs0_RA",
+  authDomain: "dental-moderator.firebaseapp.com",
+  databaseURL: "https://dental-moderator-default-rtdb.europe-west1.firebasedatabase.app", // Updated to Europe region
+  projectId: "dental-moderator",
+  storageBucket: "dental-moderator.firebasestorage.app",
+  messagingSenderId: "600867027414",
+  appId: "1:600867027414:web:f6fd0f6dd45bfe00d90c77",
+  measurementId: "G-MV7NXDYG5N"
 };
 
 try {
@@ -50,7 +51,7 @@ try {
   };
   window.FIREBASE_READY = true;
   window.dispatchEvent(new Event("firebase-ready"));
-} catch(e){ console.warn("Firebase not configured:", e.message); }
+} catch(e){ console.warn("Firebase initialization failed:", e.message); }
 </script>
 
 <!-- ═══════════════════════════════════════════════════
