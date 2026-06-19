@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title id="page-title">نظام إدارة العيادة الذكي</title>
+<title id="page-title">عيادة | نظام الإدارة الذكي</title>
 <meta name="description" content="نظام إدارة العيادة الذكي — مواعيد، حسابات، تحليل تكاليف"/>
 <meta name="theme-color" content="#00D4AA"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -16,60 +16,36 @@
 
 <script type="module">
 import { initializeApp }                        from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, set, push, remove,
-         onValue, update, get }                  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getDatabase, ref, set, push, remove, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+// تم إضافة مكتبة المصادقة لإتاحة ربط مستخدمي Firebase مستقبلاً
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
+// ⚠️ استبدل هذه الإعدادات ببيانات مشروعك الحقيقية من منصة Firebase
 const FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyCOZJWyQOoD2PF6jRPwB0vo14eKiPs0_RA",
-  authDomain:        "dental-moderator.firebaseapp.com",
-  databaseURL:       "https://dental-moderator-default-rtdb.firebaseio.com", 
-  projectId:         "dental-moderator",
-  storageBucket:     "dental-moderator.firebasestorage.app",
-  messagingSenderId: "600867027414",
-  appId:             "1:600867027414:web:f6fd0f6dd45bfe00d90c77",
-  measurementId:     "G-MV7NXDYG5N"
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+  databaseURL:       "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID",
 };
 
+// تهيئة Firebase
 const firebaseApp = initializeApp(FIREBASE_CONFIG);
 const db          = getDatabase(firebaseApp);
+const auth        = getAuth(firebaseApp);
 
 const PATHS = {
   appointments: "appointments",
   finance:      "finance",
   settings:     "settings",
-  finTypes:     "settings/financeTypes",
-  services:     "settings/services"
 };
 
+// تصدير دوال العمليات الحقيقية للـ Global Scope ليتمكن الكود التقليدي من استدعائها
 window.FB = {
-  // ── Authentication ────────────────────────────
-  async loginUser(username, password) {
-    try {
-      const snap = await get(ref(db, `${PATHS.settings}/users`));
-      const users = snap.val() || {};
-      
-      // If user exists in Firebase, validate it
-      if (users && users[username]) {
-        if (users[username].password === password) {
-          return { username, ...users[username] };
-        }
-        return null;
-      }
-    } catch (e) {
-      console.warn("Firebase check failed, switching to local authentication safety net:", e);
-    }
-
-    // Safety fallback credentials if Firebase is empty or unreachable during initial setup
-    if (username === "owner" && password === "doctor123") {
-      return { username, name: "د. خالد محمد", initials: "خم", role: "الطبيب المالك" };
-    }
-    if (username === "secretary" && password === "clinic456") {
-      return { username, name: "سكرتيرة العيادة", initials: "سك", role: "سكرتارية العيادة" };
-    }
-    return null;
-  },
-
-  // ── Appointments ──────────────────────────────
+  auth: auth,
+  // ── المواعيد ──────────────────────────────
   addAppointment(data){
     const newRef = push(ref(db, PATHS.appointments));
     return set(newRef, { ...data, fbId: newRef.key });
@@ -86,8 +62,7 @@ window.FB = {
       callback(Object.values(raw));
     });
   },
-
-  // ── Finance ───────────────────────────────────
+  // ── الخزنة والمالية ───────────────────────────
   addFinance(data){
     const newRef = push(ref(db, PATHS.finance));
     return set(newRef, { ...data, fbId: newRef.key });
@@ -101,38 +76,11 @@ window.FB = {
       callback(Object.values(raw));
     });
   },
-
-  // ── Dynamic Custom Finance Types ──────────────
-  saveFinanceType(typeId, label, category){
-    return set(ref(db, `${PATHS.finTypes}/${typeId}`), { id: typeId, label, category });
+  // ── الإعدادات ──────────────────────────────────
+  saveSettings(data){
+    return set(ref(db, PATHS.settings), data);
   },
-  deleteFinanceType(typeId){
-    return remove(ref(db, `${PATHS.finTypes}/${typeId}`));
-  },
-  watchFinanceTypes(callback){
-    onValue(ref(db, PATHS.finTypes), snap => {
-      callback(snap.val() || {});
-    });
-  },
-
-  // ── Dynamic Custom Services ───────────────────
-  saveService(id, data){
-    return set(ref(db, `${PATHS.services}/${id}`), data);
-  },
-  deleteService(id){
-    return remove(ref(db, `${PATHS.services}/${id}`));
-  },
-  watchServices(callback){
-    onValue(ref(db, PATHS.services), snap => {
-      callback(snap.val() || null);
-    });
-  },
-
-  // ── Main Layout Core Settings ─────────────────
-  saveClinicSettings(data){
-    return update(ref(db, PATHS.settings), data);
-  },
-  watchClinicSettings(callback){
+  watchSettings(callback){
     onValue(ref(db, PATHS.settings), snap => {
       if(snap.val()) callback(snap.val());
     });
@@ -141,992 +89,455 @@ window.FB = {
 
 window.FIREBASE_READY = true;
 window.dispatchEvent(new Event("firebase-ready"));
-console.log("🔥 Firebase Engine initialized smoothly with full authentication safety-nets");
+console.log("🔥 Firebase connected smoothly.");
 </script>
 
 <script>
-let CLINIC_CONFIG = {
+const CLINIC_CONFIG = {
   clinicName:   "عيادة د. خالد للأسنان",
   doctorName:   "د. خالد محمد",
   specialty:    "طب وجراحة الأسنان",
   logoEmoji:    "🦷",
   logoUrl:      "",
-  
+
+  // الحسابات المحلية الافتراضية للوحة التحكّم (Local Authentication Configuration)
+  ownerUser:    "owner",
+  ownerPass:    "doctor123",
+  ownerName:    "د. خالد محمد",
+  ownerInitials:"خم",
+
+  secretaryUser:"secretary",
+  secretaryPass: "clinic456",
+  secretaryName: "سكرتيرة العيادة",
+  secretaryInitials:"سك",
+
+  workDays:     "السبت – الخميس",
+  workHours:    "9 ص – 9 م",
+  phone:        "01012345678",
+  address:      "6 أكتوبر، الجيزة",
+
   services: {
     "كشف":    { price: 200,  minCost: 183,  emoji: "🔍" },
     "تنظيف":  { price: 400,  minCost: 362,  emoji: "✨" },
     "حشو":    { price: 800,  minCost: 606,  emoji: "🦷" },
     "أمالغم": { price: 700,  minCost: 477,  emoji: "⚙️" },
     "علاج عصب":{ price:2500, minCost:1244,  emoji: "💉" },
-    "خلع":    { price: 350,  minCost: 167,  emoji: "🔧" }
+    "خلع":    { price: 350,  minCost: 167,  emoji: "🔧" },
+    "تقويم":  { price: 5000, minCost: 0,    emoji: "😁" },
+    "تبييض":  { price: 2000, minCost:1342,  emoji: "⭐" },
+    "تركيبة": { price: 3500, minCost: 0,    emoji: "👑" },
   },
 
   colors: {
-    navy:       "#0A1628", navyMid:    "#0F1E38", navyLight:  "#162440", navyBorder: "#1E3255",
-    accent:     "#00D4AA", accentGlow: "rgba(0,212,170,.35)", accentDim:  "rgba(0,212,170,.15)",
-    gold:       "#F5C842", goldDim:    "rgba(245,200,66,.12)", coral:      "#FF6B6B", coralDim:   "rgba(255,107,107,.12)",
-    slate:      "#8A9BB0", slateMid:    "#4A5F7A",
+    navy:       "#0A1628",
+    navyMid:    "#0F1E38",
+    navyLight:  "#162440",
+    navyBorder: "#1E3255",
+    accent:     "#00D4AA",
+    accentGlow: "rgba(0,212,170,.35)",
+    accentDim:  "rgba(0,212,170,.15)",
+    gold:       "#F5C842",
+    goldDim:    "rgba(245,200,66,.12)",
+    coral:      "#FF6B6B",
+    coralDim:   "rgba(255,107,107,.12)",
+    slate:      "#8A9BB0",
+    slateMid:   "#4A5F7A",
   },
 
   fixedCosts: {
+    rent:        2000,
+    marketing:   6000,
+    bills:       750,
+    salaries:    27000,
+    totalMonthly:35750,
+    depreciationMonthly: 13583,
     totalFixed:  49333,
+    workHrsMonth:216,
     fixedCostPerHr: 228.40,
   },
-  variableCosts: { disposables: 16.01, anesthesia: 7.80, waste: 5.00 }
-};
 
-let FINANCE_TYPES = {
-  "rev_external": { id: "rev_external", label: "إيرادات خارجية (أخرى)", category: "revenue" },
-  "exp_bills":    { id: "exp_bills", label: "مصروفات تشغيلية / فواتير", category: "expense" }
+  variableCosts: {
+    disposables:  16.01,
+    anesthesia:   7.80,
+    waste:        5.00,
+  }
 };
 </script>
 
-<style id="dynamic-theme"></style>
+<style id="dynamic-theme">
+  /* يتم تعبئتها ديناميكياً بواسطة JavaScript */
+</style>
 
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --navy:#0A1628; --navy-mid:#0F1E38; --navy-light:#162440; --navy-border:#1E3255;
   --teal:#00D4AA; --teal-dim:rgba(0,212,170,.15); --teal-glow:rgba(0,212,170,.35);
-  --gold:#F5C842; --gold-dim:rgba(245,200,66,.12); --coral:#FF6B6B; --coral-dim:rgba(255,107,107,.12);
+  --gold:#F5C842; --gold-dim:rgba(245,200,66,.12);
+  --coral:#FF6B6B; --coral-dim:rgba(255,107,107,.12);
   --slate:#8A9BB0; --slate-mid:#4A5F7A; --white:#FFFFFF;
   --font:'Cairo',sans-serif; --mono:'JetBrains Mono',monospace;
   --sidebar:250px; --topbar:60px; --radius:12px; --radius-sm:8px; --trans:0.2s cubic-bezier(.4,0,.2,1);
 }
 html,body{height:100%;background:var(--navy);color:var(--white);font-family:var(--font);font-size:14px;overflow:hidden}
 
-/* ── LOGIN ───────────────────────────────────── */
+/* ── واجهة تسجيل الدخول ───────────────────────────────────── */
 #login-screen{
   position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
   background:var(--navy);z-index:1000;
   background-image:radial-gradient(ellipse at 20% 50%, rgba(0,212,170,.06) 0%, transparent 60%);
 }
-.login-card{
-  width:440px;background:var(--navy-mid);border:1px solid var(--navy-border);
-  border-radius:24px;padding:48px 40px;position:relative;box-shadow:0 32px 80px rgba(0,0,0,.4);
-}
-.login-logo-wrap{text-align:center;margin-bottom:16px}
-.login-logo-emoji{font-size:56px;filter:drop-shadow(0 0 20px var(--teal-glow))}
+.login-card{width:440px;background:var(--navy-mid);border:1px solid var(--navy-border);border-radius:24px;padding:48px 40px;box-shadow:0 32px 80px rgba(0,0,0,.4)}
 .login-title{text-align:center;font-size:20px;font-weight:800;margin-bottom:4px}
-.login-sub{text-align:center;color:var(--slate);font-size:12px;margin-bottom:28px}
+.login-sub{text-align:center;color:var(--slate);font-size:12px;margin-bottom:24px}
 .form-group{margin-bottom:16px}
-.form-label{display:block;font-size:11px;font-weight:700;color:var(--slate);margin-bottom:8px;letter-spacing:.6px}
-.form-input{
-  width:100%;padding:13px 16px;background:var(--navy-light);border:1px solid var(--navy-border);
-  border-radius:var(--radius-sm);color:var(--white);font-family:var(--font);font-size:14px;outline:none;
-}
+.form-label{display:block;font-size:11px;font-weight:700;color:var(--slate);margin-bottom:8px}
+.form-input{width:100%;padding:13px 16px;background:var(--navy-light);border:1px solid var(--navy-border);border-radius:var(--radius-sm);color:var(--white);outline:none;transition:all var(--trans)}
 .form-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim)}
-.input-wrap{position:relative}
-.eye-btn{position:absolute;left:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--slate);font-size:16px}
-.login-btn{
-  width:100%;padding:14px;background:var(--teal);border:none;border-radius:var(--radius-sm);
-  color:var(--navy);font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;transition:all var(--trans);margin-top:8px;
-}
-.login-btn:hover{background:#00f0c0;box-shadow:0 8px 28px var(--teal-glow)}
-.login-error{
-  background:var(--coral-dim);border:1px solid rgba(255,107,107,.3);border-radius:var(--radius-sm);
-  padding:10px 14px;color:var(--coral);font-size:13px;text-align:center;margin-bottom:12px;
-}
+.login-btn{width:100%;padding:14px;background:var(--teal);border:none;border-radius:var(--radius-sm);color:var(--navy);font-size:15px;font-weight:800;cursor:pointer;transition:all var(--trans)}
+.login-btn:hover{background:#00f0c0;transform:translateY(-1px)}
+.login-error{background:var(--coral-dim);border:1px solid rgba(255,107,107,.3);border-radius:var(--radius-sm);padding:10px 14px;color:var(--coral);font-size:13px;text-align:center;margin-bottom:12px;display:none}
 
-/* ── LAYOUT ──────────────────────────────────── */
+/* ── واجهة التطبيق الرئيسية ────────────────────────────────── */
 #app{display:none;height:100vh;overflow:hidden}
 #app.visible{display:flex}
-
-.sidebar{
-  width:var(--sidebar);flex-shrink:0;background:var(--navy-mid);border-left:1px solid var(--navy-border);
-  display:flex;flex-direction:column;height:100vh;position:relative;
-}
-.sidebar-brand{padding:20px 20px 16px;border-bottom:1px solid var(--navy-border);display:flex;align-items:center;gap:12px}
-.brand-logo-emoji{font-size:30px}
-.brand-name{font-size:13px;font-weight:800;line-height:1.3;color:var(--white)}
-.brand-sub{font-size:10px;color:var(--slate);margin-top:1px}
-.sidebar-nav{flex:1;padding:12px 10px;overflow-y:auto;scrollbar-width:none}
-.nav-section-label{font-size:10px;font-weight:700;color:var(--slate-mid);letter-spacing:.8px;text-transform:uppercase;padding:12px 10px 6px}
-.nav-item{
-  display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);
-  cursor:pointer;transition:all var(--trans);margin-bottom:2px;position:relative;color:var(--slate);font-size:13px;font-weight:500;
-}
-.nav-item:hover{background:rgba(255,255,255,.05);color:var(--white)}
-.nav-item.active{background:var(--teal-dim);color:var(--teal)}
-.nav-item.active::before{
-  content:'';position:absolute;right:-10px;top:50%;transform:translateY(-50%);width:3px;height:60%;background:var(--teal);
-}
-.nav-icon{font-size:17px;width:22px;text-align:center}
-.nav-badge{margin-right:auto;background:var(--teal);color:var(--navy);font-size:10px;font-weight:800;padding:1px 7px;border-radius:20px}
-.sidebar-user{padding:16px;border-top:1px solid var(--navy-border)}
-.user-card{display:flex;align-items:center;gap:10px}
-.user-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;background:var(--teal-dim);color:var(--teal)}
-.user-name{font-size:13px;font-weight:700}
-.user-role{font-size:11px;color:var(--slate)}
-.logout-btn{margin-right:auto;background:none;border:none;cursor:pointer;color:var(--slate);font-size:16px}
-
+.sidebar{width:var(--sidebar);background:var(--navy-mid);border-left:1px solid var(--navy-border);display:flex;flex-direction:column;height:100vh}
+.sidebar-brand{padding:20px;border-bottom:1px solid var(--navy-border);display:flex;align-items:center;gap:12px}
+.brand-name{font-size:14px;font-weight:800}
+.sidebar-nav{flex:1;padding:12px 10px;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--trans);color:var(--slate);font-size:13px}
+.nav-item:hover, .nav-item.active{background:var(--teal-dim);color:var(--teal)}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.topbar{height:var(--topbar);flex-shrink:0;background:var(--navy-mid);border-bottom:1px solid var(--navy-border);display:flex;align-items:center;padding:0 24px;gap:16px}
-.topbar-title{font-size:17px;font-weight:800}
-.topbar-sub{font-size:12px;color:var(--slate)}
-.topbar-right{margin-right:auto;display:flex;align-items:center;gap:10px}
-.status-dot{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--teal);background:var(--teal-dim);padding:4px 12px;border-radius:20px}
+.topbar{height:var(--topbar);background:var(--navy-mid);border-bottom:1px solid var(--navy-border);display:flex;align-items:center;padding:0 24px}
 .content{flex:1;overflow-y:auto;padding:24px}
 
-/* ── METRICS & PANELS ────────────────────────── */
-.metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
-.metric-card{background:var(--navy-mid);border:1px solid var(--navy-border);border-radius:var(--radius);padding:18px 20px;position:relative;overflow:hidden}
-.metric-card::after{content:'';position:absolute;top:0;right:0;width:3px;height:100%}
-.metric-card.teal::after{background:var(--teal)}
-.metric-card.gold::after{background:var(--gold)}
-.metric-card.coral::after{background:var(--coral)}
-.metric-card.purple::after{background:#A855F7}
-.metric-value{font-size:24px;font-weight:800}
-.panel{background:var(--navy-mid);border:1px solid var(--navy-border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px}
-.panel-header{padding:16px 20px;border-bottom:1px solid var(--navy-border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.panel-title{font-size:14px;font-weight:700}
+/* ── الأقسام والشاشات داخل التطبيق ────────────────────────────── */
+.app-section{display:none}
+.app-section.active{display:block}
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px}
+.metric-card{background:var(--navy-mid);border:1px solid var(--navy-border);border-radius:var(--radius);padding:18px 20px}
+.metric-value{font-size:24px;font-weight:800;margin-top:6px}
+.panel{background:var(--navy-mid);border:1px solid var(--navy-border);border-radius:var(--radius);margin-bottom:20px;overflow:hidden}
+.panel-header{padding:16px 20px;border-bottom:1px solid var(--navy-border);display:flex;justify-content:between;align-items:center}
 .panel-body{padding:20px}
 
-/* ── UI COMPONENTS ───────────────────────────── */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all var(--trans)}
-.btn-primary{background:var(--teal);color:var(--navy)}
-.btn-ghost{background:rgba(255,255,255,.06);color:var(--white);border:1px solid var(--navy-border)}
-.btn-danger{background:var(--coral-dim);color:var(--coral);border:1px solid rgba(255,107,107,.3)}
-.btn-sm{padding:4px 10px;font-size:11px}
-.pill-group{display:flex;gap:6px}
-.pill{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--navy-border);color:var(--slate)}
-.pill.active{background:var(--teal-dim);border-color:var(--teal);color:var(--teal)}
-
-/* ── TABLES ──────────────────────────────────── */
-.tbl-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse}
-thead tr{border-bottom:1px solid var(--navy-border)}
-th{padding:10px 14px;text-align:right;font-size:11px;color:var(--slate)}
-td{padding:12px 14px;font-size:13px;white-space:nowrap}
-.td-name{font-weight:700}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
-.badge-teal{background:var(--teal-dim);color:var(--teal)}
-.badge-coral{background:var(--coral-dim);color:var(--coral)}
-
-/* ── SELECTS & INPUTS ────────────────────────── */
-select,input[type=text],input[type=date],input[type=time],input[type=number],input[type=password],textarea{
-  width:100%;padding:10px 14px;background:var(--navy-light);border:1px solid var(--navy-border);border-radius:var(--radius-sm);color:var(--white);font-family:var(--font);font-size:13px;outline:none;
-}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.field-label{font-size:11px;font-weight:700;color:var(--slate);margin-bottom:6px;display:block}
-
-/* ── MODAL overlay ───────────────────────────── */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:500}
-.modal-overlay.open{display:flex}
-.modal{background:var(--navy-mid);border:1px solid var(--navy-border);border-radius:20px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto}
-.modal-header{padding:20px 24px;border-bottom:1px solid var(--navy-border);display:flex;align-items:center;justify-content:space-between}
-.modal-body{padding:24px}
-.modal-footer{padding:16px 24px;border-top:1px solid var(--navy-border);display:flex;gap:10px;justify-content:flex-end}
-.modal-close{background:none;border:none;color:var(--slate);cursor:pointer;font-size:20px}
-
-/* ── COST CARDS ──────────────────────────────── */
-.cost-hero{background:linear-gradient(135deg,rgba(0,212,170,.08),rgba(168,85,247,.06));border:1px solid rgba(0,212,170,.2);border-radius:var(--radius);padding:24px;margin-bottom:20px}
-.cost-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
-.cost-item{background:var(--navy-light);border:1px solid var(--navy-border);border-radius:var(--radius-sm);padding:16px}
-.service-price-card{background:var(--navy-light);border:1px solid var(--navy-border);border-radius:var(--radius-sm);padding:16px;display:flex;flex-direction:column;gap:8px}
-
-.hidden-view{display:none !important}
-.no-data{padding:32px;text-align:center;color:var(--slate)}
-.g-12{display:flex;gap:12px;align-items:center}
+/* محاكي الشات بوت */
+.chat-layout{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.chat-sim{display:flex;flex-direction:column;height:400px;background:var(--navy);border-radius:var(--radius);border:1px solid var(--navy-border);overflow:hidden}
+.chat-messages{flex:1;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.msg-bubble{padding:10px 14px;border-radius:12px;max-width:80%;font-size:13px}
+.msg-bot{background:var(--teal);color:var(--navy);align-self:flex-start}
+.msg-user{background:var(--navy-light);color:var(--white);align-self:flex-end}
+.chat-input-row{padding:12px;background:var(--navy-mid);display:flex;gap:10px}
 </style>
 </head>
 <body>
 
 <div id="login-screen">
   <div class="login-card">
-    <div class="login-logo-wrap"><span id="login-logo-slot" class="login-logo-emoji">🦷</span></div>
-    <h1 id="login-clinic-name" class="login-title">نظام إدارة العيادة الذكي</h1>
-    <p class="login-sub">الرجاء تسجيل الدخول للمتابعة</p>
-    
-    <div id="login-error-msg" class="login-error" style="display:none"></div>
-    
-    <form id="login-form" onsubmit="handleLogin(event)">
-      <div class="form-group">
-        <label class="form-label">اسم المستخدم</label>
-        <input type="text" id="username" class="form-input" placeholder="أدخل اسم المستخدم" required/>
-      </div>
-      <div class="form-group">
-        <label class="form-label">كلمة المرور السحابية</label>
-        <div class="input-wrap">
-          <input type="password" id="password" class="form-input" placeholder="••••••••" required/>
-          <button type="button" class="eye-btn" onclick="togglePassView('password')">👁️</button>
-        </div>
-      </div>
-      <button type="submit" class="login-btn">تسجيل الدخول الآمن 🔒</button>
-    </form>
+    <div class="login-title" id="lg-title">عيادة الأسنان الذكية</div>
+    <div class="login-sub">نظام إدارة العيادات والمزامنة الفورية</div>
+    <div class="login-error" id="login-err-msg">خطأ في اسم المستخدم أو كلمة المرور</div>
+    <div class="form-group">
+      <label class="form-label">اسم المستخدم</label>
+      <input type="text" id="login-user" class="form-input" placeholder="ادخل اسم المستخدم">
+    </div>
+    <div class="form-group">
+      <label class="form-label">كلمة المرور</label>
+      <input type="password" id="login-pass" class="form-input" placeholder="••••••••">
+    </div>
+    <button class="login-btn" onclick="handleLogin()">تسجيل الدخول</button>
   </div>
 </div>
 
 <div id="app">
-  <aside class="sidebar">
+  <div class="sidebar">
     <div class="sidebar-brand">
-      <div id="brand-logo-slot"><span class="brand-logo-emoji">🦷</span></div>
-      <div>
-        <div id="brand-clinic-name" class="brand-name">جاري التحميل...</div>
-        <div id="brand-doc-name" class="brand-sub">جاري التحميل...</div>
-      </div>
+      <span style="font-size:24px">🦷</span>
+      <div class="brand-name" id="sb-clinic-name">العيادة الذكية</div>
     </div>
-    
-    <nav class="sidebar-nav" id="sidebar-nav">
-      <div class="nav-section-label">المتابعة الحية</div>
-      <div class="nav-item active" data-view="v-dash" onclick="switchView('v-dash')"><span class="nav-icon">📊</span><span>الرئيسية والتحليلات</span></div>
-      <div class="nav-item" data-view="v-appts" onclick="switchView('v-appts')"><span class="nav-icon">📅</span><span>سجل المواعيد الحية</span><span id="badge-appt-count" class="nav-badge" style="display:none">0</span></div>
-      
-      <div class="nav-section-label">المنظومة المالية</div>
-      <div class="nav-item" data-view="v-finance" onclick="switchView('v-finance')"><span class="nav-icon">💰</span><span>الحسابات والمصاريف</span></div>
-      <div class="nav-item" data-view="v-costs" onclick="switchView('v-costs')"><span class="nav-icon">🔬</span><span>تحليل قائمة الأسعار</span></div>
-      
-      <div class="nav-section-label">الإدارة والتحكم</div>
-      <div class="nav-item" data-view="v-admin" onclick="switchView('v-admin')" style="border: 1px dashed var(--gold); background: rgba(245,200,66,0.05); color: var(--gold)"><span class="nav-icon">👑</span><span>لوحة التحكم للمدير</span></div>
-    </nav>
-    
-    <div class="sidebar-user">
-      <div class="user-card">
-        <div id="u-avatar" class="user-avatar">--</div>
-        <div>
-          <div id="u-name" class="user-name">المستخدم</div>
-          <div id="u-role" class="user-role">الرتبة</div>
-        </div>
-        <button class="logout-btn" onclick="logout()">🚪</button>
-      </div>
+    <div class="sidebar-nav">
+      <div class="nav-item active" onclick="switchSection('sec-dashboard', this)">📊 لوحة التحكم</div>
+      <div class="nav-item" onclick="switchSection('sec-appointments', this)">📅 إدارة المواعيد</div>
+      <div class="nav-item" onclick="switchSection('sec-finance', this)">💰 الخزنة المالية</div>
+      <div class="nav-item" onclick="switchSection('sec-chatbot', this)">🤖 محاكي البوت</div>
     </div>
-  </aside>
-  
-  <main class="main">
-    <header class="topbar">
-      <div>
-        <h2 id="topbar-title-text" class="topbar-title">لوحة التحكم</h2>
-        <p id="topbar-sub-text" class="topbar-sub">مراقبة الأداء المالي والتشغيلي</p>
-      </div>
-      <div class="topbar-right">
-        <div id="fb-status-badge" class="status-dot">جاري الاتصال بالسحاب...</div>
-      </div>
-    </header>
-    
-    <div class="content">
-      <section id="v-dash" class="view-pane">
-        <div class="metrics-grid">
-          <div class="metric-card teal">
-            <div class="metric-value" id="m-today-appts">0</div>
-            <div style="color:var(--slate); font-size:12px; margin-top:4px;">مواعيد اليوم الكلية</div>
-          </div>
-          <div class="metric-card gold">
-            <div class="metric-value" id="m-month-rev">0 ج.م</div>
-            <div style="color:var(--slate); font-size:12px; margin-top:4px;">إيرادات الشهر المجمعة</div>
-          </div>
-          <div class="metric-card coral">
-            <div class="metric-value" id="m-month-vcosts">0 ج.م</div>
-            <div style="color:var(--slate); font-size:12px; margin-top:4px;">إجمالي المصروفات والمتغيرات</div>
-          </div>
-          <div class="metric-card purple">
-            <div class="metric-value" id="m-month-profit">0 ج.م</div>
-            <div style="color:var(--slate); font-size:12px; margin-top:4px;">صافي الربحية الحالية</div>
-          </div>
-        </div>
-        
-        <div style="display:grid; grid-template-columns: 1.6fr 1fr; gap:20px">
-          <div class="panel">
-            <div class="panel-header"><h3 class="panel-title">قائمة الانتظار الحالية فوراً</h3></div>
-            <div class="panel-body tbl-wrap" style="padding:0">
-              <table id="tbl-dash-appts">
-                <thead><tr><th>المريض</th><th>الوقت</th><th>الخدمة</th><th>الحالة</th></tr></thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </div>
-          <div class="panel">
-            <div class="panel-header"><h3 class="panel-title">نسب الخدمات المطلوبة</h3></div>
-            <div class="panel-body" id="dash-services-chart-box"></div>
-          </div>
-        </div>
-      </section>
-      
-      <section id="v-appts" class="view-pane hidden-view">
-        <div style="display:grid; grid-template-columns: 1fr 1.8fr; gap:20px">
-          <div class="panel">
-            <div class="panel-header"><h3 class="panel-title">حجز موعد جديد بالمنظومة</h3></div>
-            <div class="panel-body">
-              <form id="appt-form" onsubmit="addAppointmentSubmit(event)">
-                <div class="form-group"><label class="field-label">اسم المريض</label><input type="text" id="ap-name" required/></div>
-                <div class="form-grid">
-                  <div class="form-group"><label class="field-label">التاريخ</label><input type="date" id="ap-date" required/></div>
-                  <div class="form-group"><label class="field-label">الوقت</label><input type="time" id="ap-time" required/></div>
-                </div>
-                <div class="form-group"><label class="field-label">الخدمة المطلوبة</label><select id="ap-service" onchange="autoFillPrice()"></select></div>
-                <div class="form-group"><label class="field-label">القيمة المقررة (ج.م)</label><input type="number" id="ap-price" required/></div>
-                <div class="form-group"><label class="field-label">ملاحظات الطبيب</label><textarea id="ap-notes"></textarea></div>
-                <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center">تثبيت موعد جديد سحابياً 💾</button>
-              </form>
-            </div>
-          </div>
-          
-          <div class="panel">
-            <div class="panel-header">
-              <h3 class="panel-title">جدول الحالات الشامل</h3>
-              <div class="pill-group" id="appt-filters">
-                <span class="pill active" onclick="filterAppts('all')">الكل</span>
-                <span class="pill" onclick="filterAppts('today')">اليوم</span>
-                <span class="pill" onclick="filterAppts('pending')">انتظار</span>
-              </div>
-            </div>
-            <div class="panel-body tbl-wrap" style="padding:0">
-              <table id="tbl-appts-master">
-                <thead><tr><th>المريض</th><th>التاريخ والوقت</th><th>الإجراء</th><th>المبلغ</th><th>الحالة</th><th>إجراءات</th></tr></thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
-      
-      <section id="v-finance" class="view-pane hidden-view">
-        <div style="display:grid; grid-template-columns: 1fr 1.6fr; gap:20px">
-          <div class="panel">
-            <div class="panel-header">
-              <h3 class="panel-title">تسجيل تدفق مالي</h3>
-              <button class="btn btn-ghost btn-sm" onclick="openFinTypesModal()">⚙️ إدارة أنواع المعاملات</button>
-            </div>
-            <div class="panel-body">
-              <form id="fin-form" onsubmit="addFinanceSubmit(event)">
-                <div class="form-group"><label class="field-label">نوع المعاملة المعتمد</label><select id="fi-type"></select></div>
-                <div class="form-group"><label class="field-label">القيمة المالية (ج.م)</label><input type="number" id="fi-amount" required/></div>
-                <div class="form-group"><label class="field-label">التاريخ</label><input type="date" id="fi-date" required/></div>
-                <div class="form-group"><label class="field-label">البيان والشرح</label><input type="text" id="fi-desc" required/></div>
-                <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center">قيد المعاملة المالية في الدفتر 💴</button>
-              </form>
-            </div>
-          </div>
-          
-          <div class="panel">
-            <div class="panel-header"><h3 class="panel-title">دفتر النقدية والتدفقات المالي العام</h3></div>
-            <div class="panel-body tbl-wrap" style="padding:0">
-              <table id="tbl-finance-master">
-                <thead><tr><th>البيان والشارح</th><th>التاريخ</th><th>التصنيف</th><th>المبلغ النظري</th><th>إجراء</th></tr></thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
-      
-      <section id="v-costs" class="view-pane hidden-view">
-        <div class="cost-hero">
-          <h3 style="margin-bottom:8px">هيكلية التسعير والتحليل المستنتج لربحية العيادة</h3>
-          <div class="cost-grid">
-            <div class="cost-item"><div>التكلفة الثابتة لكل ساعة تشغيل</div><div class="metric-value text-gold" style="font-size:20px">228.40 ج.م</div></div>
-            <div class="cost-item"><div>معدل الاستهلاك والمستلزمات الأساسية</div><div class="metric-value" style="font-size:20px">28.81 ج.م</div></div>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-header"><h3 class="panel-title">هامش الأمان والربح المستهدف لكل خدمة طبية</h3></div>
-          <div class="panel-body"><div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px" id="grid-service-prices"></div></div>
-        </div>
-      </section>
-
-      <section id="v-admin" class="view-pane hidden-view">
-        <div id="admin-lock-gate" style="text-align: center; padding: 60px 20px;">
-          <div style="font-size: 48px; margin-bottom: 12px;">🔒</div>
-          <h3 class="panel-title" style="font-size: 18px; margin-bottom: 8px;">لوحة تحكم المدير محمية بالكامل</h3>
-          <p style="color: var(--slate); font-size: 13px; margin-bottom: 20px;">الرجاء إدخال كلمة المرور الاستراتيجية المخصصة للمدير للمتابعة</p>
-          <div style="max-width: 320px; margin: 0 auto; display: flex; gap: 8px;">
-            <input type="password" id="admin-pass-input" placeholder="••••••••"/>
-            <button class="btn btn-primary" onclick="verifyAdminGate()">فتح اللوحة</button>
-          </div>
-          <div id="admin-gate-err" style="color: var(--coral); font-size: 13px; margin-top: 10px; display: none;">❌ كلمة المرور غير صحيحة!</div>
-        </div>
-
-        <div id="admin-actual-content" style="display: none;">
-          <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px;">
-            <div class="panel">
-              <div class="panel-header"><h3 class="panel-title">تحديث هوية وبيانات العيادة</h3></div>
-              <div class="panel-body">
-                <div class="form-group"><label class="field-label">اسم العيادة المعتمد</label><input type="text" id="adm-clinic-name"/></div>
-                <div class="form-group"><label class="field-label">اسم الطبيب المالك</label><input type="text" id="adm-doc-name"/></div>
-                <div class="form-group"><label class="field-label">التخصص الطبي الفرعي</label><input type="text" id="adm-spec"/></div>
-                <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="saveClinicIdentityAdmin()">حفظ وتعميم الهوية الجديدة 💾</button>
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-header"><h3 class="panel-title">التحكم المطلق بأسعار وجداول الخدمات الطبية</h3></div>
-              <div class="panel-body">
-                <div style="background: var(--navy-light); padding: 12px; border-radius: var(--radius-sm); margin-bottom: 16px;">
-                  <h4 style="font-size:12px; color:var(--teal); margin-bottom:10px;">إضافة / تعديل خدمة طبية الحالية</h4>
-                  <div class="form-grid" style="margin-bottom: 8px;">
-                    <div class="form-group"><label class="field-label">اسم الخدمة (مثل: كشف)</label><input type="text" id="adm-svc-name" placeholder="حشو ليزر..."/></div>
-                    <div class="form-group"><label class="field-label">الأيقونة (Emoji)</label><input type="text" id="adm-svc-emoji" placeholder="🦷"/></div>
-                  </div>
-                  <div class="form-grid" style="margin-bottom: 12px;">
-                    <div class="form-group"><label class="field-label">سعر البيع للمريض (ج.م)</label><input type="number" id="adm-svc-price"/></div>
-                    <div class="form-group"><label class="field-label">تكلفة المواد الطبية (ج.م)</label><input type="number" id="adm-svc-mincost"/></div>
-                  </div>
-                  <button class="btn btn-primary btn-sm" onclick="addOrUpdateServiceAdmin()">تثبيت وتحديث الخدمة السعرية ✨</button>
-                </div>
-
-                <h4 style="font-size: 12px; color: var(--slate); margin-bottom: 8px;">قائمة الخدمات التشغيلية السحابية الحالية</h4>
-                <div class="tbl-wrap">
-                  <table id="tbl-admin-services">
-                    <thead><tr><th>الخدمة</th><th>السعر الأساسي</th><th>تكلفة المواد</th><th>تعديل</th><th>حذف</th></tr></thead>
-                    <tbody></tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-  </main>
-</div>
-
-<div class="modal-overlay" id="fintypes-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 class="modal-title">إدارة وتعديل أنواع المعاملات المالية</h3>
-      <button class="modal-close" onclick="closeFinTypesModal()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div style="background: var(--navy-light); padding: 12px; border-radius: var(--radius-sm); margin-bottom: 16px;">
-        <h4 style="font-size:12px; color:var(--teal); margin-bottom:8px;">إضافة نوع معاملة جديد مخصص</h4>
-        <div class="form-grid" style="margin-bottom: 8px;">
-          <div><label class="field-label">اسم التصنيف (البيان)</label><input type="text" id="new-ft-label" placeholder="شراء مستهلكات طارئة..."/></div>
-          <div><label class="field-label">طبيعة المعاملة</label><select id="new-ft-cat"><option value="expense">مصروفات / تكاليف تشغيل</option><option value="revenue">إيرادات خارجية إضافية</option></select></div>
-        </div>
-        <button type="button" class="btn btn-primary btn-sm" onclick="addNewFinanceTypeSubmit()">حفظ وتثبيت التصنيف ➕</button>
-      </div>
-      
-      <h4 style="font-size:12px; color:var(--slate); margin-bottom:6px;">الأنواع النشطة المتاحة بالخزينة حالياً</h4>
-      <div class="tbl-wrap" style="max-height: 200px; overflow-y: auto;">
-        <table id="tbl-fintypes-list">
-          <thead><tr><th>اسم البيان المعاملة</th><th>التصنيف الدفتري</th><th>إجراء</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
+    <div style="padding:20px; border-top:1px solid var(--navy-border)">
+      <button style="background:var(--coral); color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; width:100%" onclick="handleLogout()">تسجيل الخروج</button>
     </div>
   </div>
-</div>
 
-<div class="modal-overlay" id="edit-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 class="modal-title">تعديل وتحديث عقد الموعد ⚙️</h3>
-      <button class="modal-close" onclick="closeEditModal()">✕</button>
+  <div class="main">
+    <div class="topbar">
+      <div class="brand-name" id="tb-title">لوحة التحكم العامة</div>
     </div>
-    <div class="modal-body">
-      <input type="hidden" id="ed-fbid"/>
-      <div class="form-group"><label class="field-label">اسم المريض</label><input type="text" id="ed-name" required/></div>
-      <div class="form-grid">
-        <div class="form-group"><label class="field-label">التاريخ</label><input type="date" id="ed-date" required/></div>
-        <div class="form-group"><label class="field-label">الوقت</label><input type="time" id="ed-time" required/></div>
+    
+    <div class="content">
+      <div id="sec-dashboard" class="app-section active">
+        <div class="metrics-grid">
+          <div class="metric-card"><div style="color:var(--slate)">إجمالي الإيرادات</div><div class="metric-value" style="color:var(--teal)" id="m-revenue">0 ج.م</div></div>
+          <div class="metric-card"><div style="color:var(--slate)">المواعيد المحجوزة</div><div class="metric-value" style="color:var(--gold)" id="m-count">0</div></div>
+          <div class="metric-card"><div style="color:var(--slate)">صافي الأرباح المقدرة</div><div class="metric-value" style="color:var(--white)" id="m-profit">0 ج.م</div></div>
+        </div>
       </div>
-      <div class="form-grid">
-        <div class="form-group"><label class="field-label">نوع الإجراء</label><select id="ed-service"></select></div>
-        <div class="form-group"><label class="field-label">المبلغ المحتسب (ج.م)</label><input type="number" id="ed-price" required/></div>
+
+      <div id="sec-appointments" class="app-section">
+        <div class="panel">
+          <div class="panel-header"><div class="brand-name">إضافة موعد جديد</div></div>
+          <div class="panel-body">
+            <div style="display:flex; gap:10px; margin-bottom:15px">
+              <input type="text" id="ap-name" class="form-input" placeholder="اسم المريض">
+              <select id="ap-service" class="form-input" style="width:200px">
+                <option value="كشف">كشف (200 ج.م)</option>
+                <option value="حشو">حشو (800 ج.م)</option>
+                <option value="تنظيف">تنظيف (400 ج.م)</option>
+                <option value="علاج عصب">علاج عصب (2500 ج.م)</option>
+              </select>
+              <button style="background:var(--teal); color:var(--navy); border:none; padding:10px 20px; border-radius:6px; font-weight:bold; cursor:pointer" onclick="addAppointmentRow()">حفظ الموعد</button>
+            </div>
+            <table style="width:100%; border-collapse:collapse; text-align:right">
+              <thead>
+                <tr style="border-bottom:1px solid var(--navy-border); height:40px">
+                  <th>المريض</th>
+                  <th>الخدمة المطلوبة</th>
+                  <th>الحالة</th>
+                </tr>
+              </thead>
+              <tbody id="appointments-list">
+                </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label class="field-label">الحالة التشغيلية</label>
-        <select id="ed-status">
-          <option value="انتظار">انتظار</option>
-          <option value="دخل للعيادة">دخل للعيادة</option>
-          <option value="تم الكشف">تم الكشف</option>
-          <option value="إلغاء">إلغاء</option>
-        </select>
+
+      <div id="sec-finance" class="app-section">
+        <div class="panel">
+          <div class="panel-header"><div class="brand-name">سجل الإيرادات والتدفقات النقدية</div></div>
+          <div class="panel-body">
+            <table style="width:100%; border-collapse:collapse; text-align:right">
+              <thead>
+                <tr style="border-bottom:1px solid var(--navy-border); height:40px">
+                  <th>البيان / المريض</th>
+                  <th>المبلغ الوارد</th>
+                  <th>الحالة التمويلية</th>
+                </tr>
+              </thead>
+              <tbody id="finance-list">
+                </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-      <div class="form-group"><label class="field-label">ملاحظات الطبيب المحدثة</label><textarea id="ed-notes"></textarea></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeEditModal()">إلغاء</button>
-      <button class="btn btn-primary" onclick="saveEditModalSubmit()">تأكيد الحفظ السحابي 💾</button>
+
+      <div id="sec-chatbot" class="app-section">
+        <div class="chat-layout">
+          <div class="panel">
+            <div class="panel-header"><div class="brand-name">سير العمل التلقائي للبوت (Flow)</div></div>
+            <div class="panel-body" style="color:var(--slate); line-height:1.8">
+              <p>🟢 الخطوة 1: الترحيب بالعميل التلقائي من إعلانات فيسبوك/إنستغرام.</p>
+              <p>📇 الخطوة 2: جمع الاسم ورقم الهاتف وتخزين البيانات فوراً.</p>
+              <p>📅 الخطوة 3: عرض الخدمات المتاحة وحجز التوقيت المناسب وضخه في Firebase.</p>
+            </div>
+          </div>
+          <div class="chat-sim">
+            <div class="chat-messages" id="chat-box">
+              <div class="msg-bubble msg-bot">مرحباً بك في عيادتنا الرقمية الذكية! كيف يمكنني مساعدتك اليوم في حجز موعدك الطبي؟</div>
+            </div>
+            <div class="chat-input-row">
+              <input type="text" id="chat-input-field" class="form-input" placeholder="اكتب ردك المحاكي هنا...">
+              <button style="background:var(--teal); border:none; padding:10px 15px; border-radius:50%; cursor:pointer" onclick="simulateChatUserReply()">➔</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
 
 <script>
-let CURRENT_USER      = null;
-let APPOINTMENTS_DATA = [];
-let FINANCE_DATA      = [];
-let ADMIN_AUTHENTICATED = false;
+// تهيئة المتغيرات الأساسية للمزامنة في الذاكرة المحلية
+let globalAppointments = [];
+let globalFinance = [];
 
-// ── BOOT SYNC PIPELINES ─────────────────────────
-function initAppInfrastructure() {
-  if (window.FIREBASE_READY) {
-    // 1. مراقبه بيانات الهوية والعيادة العامة
-    window.FB.watchClinicSettings((data) => {
-      if(data.clinicName) CLINIC_CONFIG.clinicName = data.clinicName;
-      if(data.doctorName) CLINIC_CONFIG.doctorName = data.doctorName;
-      if(data.specialty) CLINIC_CONFIG.specialty = data.specialty;
-      syncGlobalDOMIdentity();
-    });
-
-    // 2. مراقبه وقيد الخدمات والأسعار من السحاب ديناميكياً
-    window.FB.watchServices((cloudServices) => {
-      if(cloudServices) {
-        CLINIC_CONFIG.services = cloudServices;
-      } else {
-        // تهيئة قواعد البيانات السحابية بالخدمات الافتراضية لأول مرة
-        Object.keys(CLINIC_CONFIG.services).forEach(k => {
-          window.FB.saveService(k, CLINIC_CONFIG.services[k]);
-        });
-      }
-      rebuildServiceDropdowns();
-      renderCostSection();
-      renderAdminServicesTable();
-    });
-
-    // 3. مراقبة أنواع وقوائم المعاملات المالية المخصصة
-    window.FB.watchFinanceTypes((cloudFinTypes) => {
-      if(Object.keys(cloudFinTypes).length > 0) {
-        FINANCE_TYPES = cloudFinTypes;
-      } else {
-        Object.keys(FINANCE_TYPES).forEach(k => {
-          window.FB.saveFinanceType(k, FINANCE_TYPES[k].label, FINANCE_TYPES[k].category);
-        });
-      }
-      rebuildFinanceDropdowns();
-      renderFinanceTypesTable();
-    });
-
-    // 4. مراقبه سجل المواعيد والحسابات
-    window.FB.watchAppointments((data) => {
-      APPOINTMENTS_DATA = data;
-      renderAppointmentsTable();
-      renderDashboard();
-    });
-
-    window.FB.watchFinance((data) => {
-      FINANCE_DATA = data;
-      renderFinanceTable();
-      renderDashboard();
-    });
-
-    document.getElementById("fb-status-badge").innerHTML = `🟢 متصل بالشبكة السحابية`;
-  }
-}
-
-function syncGlobalDOMIdentity(){
-  document.getElementById("page-title").innerText = CLINIC_CONFIG.clinicName + " | نظام الإدارة الذكي";
-  document.getElementById("login-clinic-name").innerText = CLINIC_CONFIG.clinicName;
-  document.getElementById("brand-clinic-name").innerText = CLINIC_CONFIG.clinicName;
-  document.getElementById("brand-doc-name").innerText = CLINIC_CONFIG.doctorName;
+// عند تحميل الصفحة، يتم ضبط وتحديث الهوية البصرية من التكوين المركزي
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("sb-clinic-name").innerText = CLINIC_CONFIG.clinicName;
+  document.getElementById("lg-title").innerText = CLINIC_CONFIG.clinicName;
   
-  document.getElementById("adm-clinic-name").value = CLINIC_CONFIG.clinicName;
-  document.getElementById("adm-doc-name").value = CLINIC_CONFIG.doctorName;
-  document.getElementById("adm-spec").value = CLINIC_CONFIG.specialty;
-}
+  // الاستماع لبيانات Firebase وتحديث شاشات العرض فوراً عند الاتصال بنجاح
+  window.addEventListener("firebase-ready", () => {
+    if (window.FB) {
+      window.FB.watchAppointments((data) => {
+        globalAppointments = data;
+        renderAppointments();
+        updateDashboardMetrics();
+      });
 
-function rebuildServiceDropdowns(){
-  const s1 = document.getElementById("ap-service");
-  const s2 = document.getElementById("ed-service");
-  if(!s1 || !s2) return;
-  s1.innerHTML = ""; s2.innerHTML = "";
-  Object.keys(CLINIC_CONFIG.services).forEach(k => {
-    let item = CLINIC_CONFIG.services[k];
-    s1.innerHTML += `<option value="${k}">${item.emoji || '🦷'} ${k}</option>`;
-    s2.innerHTML += `<option value="${k}">${item.emoji || '🦷'} ${k}</option>`;
-  });
-  autoFillPrice();
-}
-
-function rebuildFinanceDropdowns(){
-  const fSelect = document.getElementById("fi-type");
-  if(!fSelect) return;
-  fSelect.innerHTML = "";
-  Object.keys(FINANCE_TYPES).forEach(k => {
-    let item = FINANCE_TYPES[k];
-    fSelect.innerHTML += `<option value="${k}">${item.label} (${item.category === 'revenue' ? 'إيراد':'مصروف'})</option>`;
-  });
-}
-
-// ── AUTH GATEWAY (FIREBASE + EMERGENCY FALLBACK) ────────────────
-async function handleLogin(e){
-  e.preventDefault();
-  const u = document.getElementById("username").value.trim();
-  const p = document.getElementById("password").value;
-  const err = document.getElementById("login-error-msg");
-  err.style.display = "none";
-
-  const userSession = await window.FB.loginUser(u, p);
-  if(userSession) {
-    CURRENT_USER = userSession;
-    document.getElementById("login-screen").style.display = "none";
-    document.getElementById("app").classList.add("visible");
-    
-    document.getElementById("u-avatar").innerText = CURRENT_USER.initials || "خم";
-    document.getElementById("u-name").innerText = CURRENT_USER.name;
-    document.getElementById("u-role").innerText = CURRENT_USER.role;
-    switchView("v-dash");
-  } else {
-    err.innerText = "❌ خطأ! الحساب غير صحيح أو لم يتم تفعيل الاتصال بقاعدة البيانات السحابية بعد.";
-    err.style.display = "block";
-  }
-}
-
-function logout(){
-  CURRENT_USER = null;
-  ADMIN_AUTHENTICATED = false;
-  document.getElementById("app").classList.remove("visible");
-  document.getElementById("login-screen").style.display = "flex";
-  document.getElementById("password").value = "";
-  document.getElementById("admin-lock-gate").style.display = "block";
-  document.getElementById("admin-actual-content").style.display = "none";
-  document.getElementById("admin-pass-input").value = "";
-}
-
-function togglePassView(id){
-  const el = document.getElementById(id);
-  el.type = el.type === "password" ? "text" : "password";
-}
-
-// ── ADMIN PANEL PROTECTED SECURITY ──────────────
-function verifyAdminGate(){
-  const pass = document.getElementById("admin-pass-input").value;
-  if(pass === "BoB2120") {
-    ADMIN_AUTHENTICATED = true;
-    document.getElementById("admin-lock-gate").style.display = "none";
-    document.getElementById("admin-actual-content").style.display = "block";
-    document.getElementById("admin-gate-err").style.display = "none";
-  } else {
-    document.getElementById("admin-gate-err").style.display = "block";
-  }
-}
-
-function saveClinicIdentityAdmin(){
-  if(!ADMIN_AUTHENTICATED) return;
-  const cName = document.getElementById("adm-clinic-name").value.trim();
-  const dName = document.getElementById("adm-doc-name").value.trim();
-  const spec  = document.getElementById("adm-spec").value.trim();
-  
-  window.FB.saveClinicSettings({ clinicName: cName, doctorName: dName, specialty: spec }).then(() => {
-    alert("🟢 تم حفظ وتحديث هوية العيادة في السحاب وتعميمها بنجاح!");
-  });
-}
-
-function addOrUpdateServiceAdmin(){
-  if(!ADMIN_AUTHENTICATED) return;
-  const name = document.getElementById("adm-svc-name").value.trim();
-  const emoji = document.getElementById("adm-svc-emoji").value.trim() || "🦷";
-  const price = parseFloat(document.getElementById("adm-svc-price").value) || 0;
-  const minCost = parseFloat(document.getElementById("adm-svc-mincost").value) || 0;
-
-  if(!name) { alert("الرجاء إدخال اسم الخدمة!"); return; }
-  
-  window.FB.saveService(name, { price, minCost, emoji }).then(() => {
-    document.getElementById("adm-svc-name").value = "";
-    document.getElementById("adm-svc-price").value = "";
-    document.getElementById("adm-svc-mincost").value = "";
-    alert("🟢 تم حفظ وتحديث قائمة الأسعار بنجاح!");
-  });
-}
-
-// ── RENDER ENGINE TABLES & MORE ─────────────────────────
-function deleteServiceAdmin(id) {
-  if(!ADMIN_AUTHENTICATED) return;
-  if(confirm(`هل أنت متأكد من حذف خدمة (${id}) نهائياً من قائمة الأسعار؟`)) {
-    window.FB.deleteService(id);
-  }
-}
-
-function renderAdminServicesTable(){
-  const tbody = document.querySelector("#tbl-admin-services tbody");
-  if(!tbody) return;
-  tbody.innerHTML = "";
-  Object.keys(CLINIC_CONFIG.services).forEach(k => {
-    let s = CLINIC_CONFIG.services[k];
-    tbody.innerHTML += `
-      <tr>
-        <td class="td-name">${s.emoji || '🦷'} ${k}</td>
-        <td>${s.price} ج.م</td>
-        <td>${s.minCost} ج.م</td>
-        <td><button class="btn btn-ghost btn-sm" onclick="loadServiceToAdminForm('${k}')">✏️ تعديل</button></td>
-        <td><button class="btn btn-danger btn-sm" onclick="deleteServiceAdmin('${k}')">🗑️ حذف</button></td>
-      </tr>
-    `;
-  });
-}
-
-function loadServiceToAdminForm(k) {
-  let s = CLINIC_CONFIG.services[k];
-  document.getElementById("adm-svc-name").value = k;
-  document.getElementById("adm-svc-emoji").value = s.emoji || "🦷";
-  document.getElementById("adm-svc-price").value = s.price;
-  document.getElementById("adm-svc-mincost").value = s.minCost;
-}
-
-function openFinTypesModal(){ document.getElementById("fintypes-modal").classList.add("open"); }
-function closeFinTypesModal(){ document.getElementById("fintypes-modal").classList.remove("open"); }
-
-function addNewFinanceTypeSubmit(){
-  const label = document.getElementById("new-ft-label").value.trim();
-  const cat = document.getElementById("new-ft-cat").value;
-  if(!label) return;
-  const id = "ft_" + Date.now();
-  window.FB.saveFinanceType(id, label, cat).then(() => {
-    document.getElementById("new-ft-label").value = "";
-  });
-}
-
-function deleteFinanceTypeNode(id){
-  if(confirm("حذف هذا النوع من التصنيفات المالية؟")) {
-    window.FB.deleteFinanceType(id);
-  }
-}
-
-function renderFinanceTypesTable(){
-  const tbody = document.querySelector("#tbl-fintypes-list tbody");
-  if(!tbody) return;
-  tbody.innerHTML = "";
-  Object.keys(FINANCE_TYPES).forEach(k => {
-    let item = FINANCE_TYPES[k];
-    tbody.innerHTML += `
-      <tr>
-        <td class="td-name">${item.label}</td>
-        <td><span class="badge ${item.category === 'revenue' ? 'badge-teal':'badge-coral'}">${item.category === 'revenue'?'إيراد':'مصروف'}</span></td>
-        <td><button class="btn btn-danger btn-sm" onclick="deleteFinanceTypeNode('${k}')">🗑️</button></td>
-      </tr>
-    `;
-  });
-}
-
-function switchView(viewId){
-  document.querySelectorAll(".view-pane").forEach(p => p.classList.add("hidden-view"));
-  document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active"));
-  
-  document.getElementById(viewId).classList.remove("hidden-view");
-  const targetBtn = document.querySelector(`.nav-item[data-view="${viewId}"]`);
-  if(targetBtn) targetBtn.classList.add("active");
-
-  const titleText = document.getElementById("topbar-title-text");
-  const subText   = document.getElementById("topbar-sub-text");
-  
-  if(viewId === 'v-dash') { titleText.innerText = "لوحة التحكم والتحليلات الذكية"; subText.innerText = "مراقبة حية لأداء العيادة، التكاليف، والأرباح الصافية"; }
-  else if(viewId === 'v-appts') { titleText.innerText = "منظومة المواعيد"; subText.innerText = "جدولة مواعيد المرضى وضبط الإجراءات الطبية"; }
-  else if(viewId === 'v-finance') { titleText.innerText = "دفاتر التدفقات المالية"; subText.innerText = "رصد الإيرادات والمصروفات المخصصة تلقائياً"; }
-  else if(viewId === 'v-costs') { titleText.innerText = "لوحة حساب التكلفة وهامش الأمان الفعلي"; subText.innerText = "تحليل الجدوى المالية للخدمات"; }
-  else if(viewId === 'v-admin') { titleText.innerText = "الإدارة العليا الحامية للمنظومة"; subText.innerText = "التحكم الكامل في الأسعار، الهوية، وإعدادات النظام السحابية"; }
-}
-
-function autoFillPrice(){
-  const s = document.getElementById("ap-service").value;
-  if(CLINIC_CONFIG.services[s]){ document.getElementById("ap-price").value = CLINIC_CONFIG.services[s].price; }
-}
-
-function addAppointmentSubmit(e){
-  e.preventDefault();
-  const data = {
-    patientName: document.getElementById("ap-name").value.trim(),
-    date:        document.getElementById("ap-date").value,
-    time:        document.getElementById("ap-time").value,
-    service:     document.getElementById("ap-service").value,
-    price:       parseFloat(document.getElementById("ap-price").value) || 0,
-    notes:       document.getElementById("ap-notes").value.trim(),
-    status:      "انتظار",
-    timestamp:   Date.now()
-  };
-  window.FB.addAppointment(data).then(()=>{ document.getElementById("appt-form").reset(); autoFillPrice(); });
-}
-
-function addFinanceSubmit(e){
-  e.preventDefault();
-  const tKey = document.getElementById("fi-type").value;
-  const data = {
-    typeKey:   tKey,
-    type:      FINANCE_TYPES[tKey]?.category || "expense",
-    amount:    parseFloat(document.getElementById("fi-amount").value) || 0,
-    date:      document.getElementById("fi-date").value,
-    desc:      document.getElementById("fi-desc").value.trim(),
-    timestamp: Date.now()
-  };
-  window.FB.addFinance(data).then(()=>{ document.getElementById("fin-form").reset(); document.getElementById("fi-date").valueAsDate = new Date(); });
-}
-
-function renderAppointmentsTable(){
-  const tbody = document.querySelector("#tbl-appts-master tbody");
-  if(!tbody) return; tbody.innerHTML = "";
-  
-  let list = [...APPOINTMENTS_DATA].sort((a,b) => (a.date + ' ' + a.time).localeCompare(b.date + ' ' + b.time));
-  const activePill = document.querySelector("#appt-filters .pill.active");
-  const filterType = activePill ? activePill.getAttribute("onclick").match(/'([^']+)'/)[1] : 'all';
-  const todayStr = new Date().toISOString().split('T')[0];
-
-  if(filterType === 'today') list = list.filter(a => a.date === todayStr);
-  if(filterType === 'pending') list = list.filter(a => a.status === 'انتظار');
-
-  const pendingCount = APPOINTMENTS_DATA.filter(a => a.status === 'انتظار').length;
-  document.getElementById("badge-appt-count").innerText = pendingCount;
-  document.getElementById("badge-appt-count").style.display = pendingCount > 0 ? "inline-block" : "none";
-
-  if(list.length === 0){ tbody.innerHTML = `<tr><td colspan="6" class="no-data">لا توجد مواعيد حالية</td></tr>`; return; }
-
-  list.forEach(a => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td class="td-name">${a.patientName}</td>
-      <td>${a.date} <span style="color:var(--slate); font-size:11px;">(${a.time})</span></td>
-      <td>${CLINIC_CONFIG.services[a.service]?.emoji || "🦷"} ${a.service}</td>
-      <td style="color:var(--teal); font-weight:700;">${a.price} ج.م</td>
-      <td><span class="badge ${a.status==='تم الكشف'?'badge-teal':'badge-coral'}">${a.status}</span></td>
-      <td>
-        <div class="g-12">
-          <button class="btn btn-ghost btn-sm" onclick="openEditModal('${a.fbId}')">⚙️ تعديل</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteAppointmentNode('${a.fbId}')">🗑️</button>
-        </div>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-function filterAppts(type){
-  document.querySelectorAll("#appt-filters .pill").forEach(p => p.classList.remove("active"));
-  event.target.classList.add("active");
-  renderAppointmentsTable();
-}
-
-function deleteAppointmentNode(fbId){
-  if(confirm("حذف الموعد نهائياً؟")) window.FB.deleteAppointment(fbId);
-}
-
-function renderFinanceTable(){
-  const tbody = document.querySelector("#tbl-finance-master tbody");
-  if(!tbody) return; tbody.innerHTML = "";
-  
-  let list = [...FINANCE_DATA].sort((a,b) => b.date.localeCompare(a.date));
-  if(list.length === 0){ tbody.innerHTML = `<tr><td colspan="5" class="no-data">الدفتر المالي فارغ</td></tr>`; return; }
-
-  list.forEach(f => {
-    const isRev = f.type === "revenue";
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td class="td-name">${f.desc} <br/><small style="color:var(--slate); font-weight:normal;">[${FINANCE_TYPES[f.typeKey]?.label || 'عام'}]</small></td>
-      <td>${f.date}</td>
-      <td><span class="badge ${isRev ? 'badge-teal':'badge-coral'}">${isRev ? 'إيرادات':'مصروفات'}</span></td>
-      <td style="font-weight:700; color:${isRev?'var(--teal)':'var(--coral)'}">${isRev?'+':'-'}${f.amount} ج.م</td>
-      <td><button class="btn btn-danger btn-sm" onclick="deleteFinanceNode('${f.fbId}')">🗑️</button></td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-function deleteFinanceNode(fbId){
-  if(confirm("حذف المعاملة؟")) window.FB.deleteFinance(fbId);
-}
-
-function renderDashboard(){
-  const todayStr = new Date().toISOString().split('T')[0];
-  const curMonthPrefix = todayStr.substring(0, 7);
-  
-  const todayAppts = APPOINTMENTS_DATA.filter(a => a.date === todayStr);
-  document.getElementById("m-today-appts").innerText = todayAppts.length;
-  
-  let monthRevenue = 0; let monthVarCosts = 0;
-  
-  APPOINTMENTS_DATA.forEach(a => {
-    if(a.date.startsWith(curMonthPrefix) && a.status === "تم الكشف") {
-      monthRevenue += a.price;
-      monthVarCosts += (CLINIC_CONFIG.services[a.service]?.minCost || 0);
-    }
-  });
-
-  FINANCE_DATA.forEach(f => {
-    if(f.date.startsWith(curMonthPrefix)){
-      if(f.type === "revenue") monthRevenue += f.amount;
-      if(f.type === "expense") monthVarCosts += f.amount;
-    }
-  });
-
-  document.getElementById("m-month-rev").innerText = `${monthRevenue.toLocaleString()} ج.م`;
-  document.getElementById("m-month-vcosts").innerText = `${monthVarCosts.toLocaleString()} ج.م`;
-  
-  const netProfit = monthRevenue - monthVarCosts - CLINIC_CONFIG.fixedCosts.totalFixed;
-  document.getElementById("m-month-profit").innerText = `${netProfit.toLocaleString()} ج.م`;
-  document.getElementById("m-month-profit").style.color = netProfit >= 0 ? 'var(--teal)' : 'var(--coral)';
-
-  // جدول انتظار الرئيسية
-  const dashBody = document.querySelector("#tbl-dash-appts tbody");
-  if(dashBody) {
-    dashBody.innerHTML = "";
-    const waiting = todayAppts.filter(a => a.status === "انتظار" || a.status === "دخل للعيادة");
-    if(waiting.length === 0) {
-      dashBody.innerHTML = `<tr><td colspan="4" class="no-data">لا توجد حالات في قائمة الانتظار اليوم</td></tr>`;
-    } else {
-      waiting.forEach(a => {
-        dashBody.innerHTML += `<tr><td class="td-name">${a.patientName}</td><td>${a.time}</td><td>${a.service}</td><td><span style="color:var(--gold)">${a.status}</span></td></tr>`;
+      window.FB.watchFinance((data) => {
+        globalFinance = data;
+        renderFinance();
+        updateDashboardMetrics();
       });
     }
-  }
+  });
+});
 
-  // رسم نسب الخدمات الأكثر طلباً
-  const chartBox = document.getElementById("dash-services-chart-box");
-  if(chartBox) {
-    chartBox.innerHTML = "";
-    let counts = {}; let total = 0;
-    APPOINTMENTS_DATA.forEach(a => { counts[a.service] = (counts[a.service] || 0) + 1; total++; });
-    Object.keys(counts).sort((a,b)=>counts[b]-counts[a]).slice(0, 3).forEach(k => {
-      let pct = total > 0 ? Math.round((counts[k]/total)*100) : 0;
-      chartBox.innerHTML += `
-        <div style="margin-bottom:8px;">
-          <div style="display:flex; justify-content:space-between; font-size:12px;"><span>${k}</span><span>${counts[k]} حالة (${pct}%)</span></div>
-          <div style="background:var(--navy-light); height:6px; border-radius:3px; overflow:hidden;"><div style="background:var(--teal); height:100%; width:${pct}%"></div></div>
-        </div>`;
-    });
+// التبديل السلس بين تبويبات لوحة التحكم
+function switchSection(sectionId, element) {
+  document.querySelectorAll('.app-section').forEach(sec => sec.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+  
+  document.getElementById(sectionId).classList.add('active');
+  element.classList.add('active');
+  
+  const sectionTitles = {
+    'sec-dashboard': 'لوحة التحكم العامة والأرباح',
+    'sec-appointments': 'نظام إدارة حجوزات المرضى',
+    'sec-finance': 'الخزنة المالية والتدفقات النقدية',
+    'sec-chatbot': 'محاكي الرد الآلي الذكي (Chatbot Simulator)'
+  };
+  document.getElementById('tb-title').innerText = sectionTitles[sectionId] || "العيادة الذكية";
+}
+
+// معالجة وإدارة نظام تسجيل الدخول المحلّي (أو عبر Firebase Auth مستقبلاً)
+function handleLogin() {
+  const userInput = document.getElementById("login-user").value;
+  const passInput = document.getElementById("login-pass").value;
+  const errorMsg  = document.getElementById("login-err-msg");
+
+  if ((userInput === CLINIC_CONFIG.ownerUser && passInput === CLINIC_CONFIG.ownerPass) ||
+      (userInput === CLINIC_CONFIG.secretaryUser && passInput === CLINIC_CONFIG.secretaryPass)) {
+    
+    errorMsg.style.display = "none";
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("app").classList.add("visible");
+  } else {
+    errorMsg.style.display = "block";
+    errorMsg.innerText = "⚠️ اسم المستخدم أو كلمة المرور غير صحيحة!";
   }
 }
 
-function renderCostSection(){
-  const grid = document.getElementById("grid-service-prices");
-  if(!grid) return; grid.innerHTML = "";
-  Object.keys(CLINIC_CONFIG.services).forEach(k => {
-    const s = CLINIC_CONFIG.services[k];
-    const totalCost = s.minCost + Math.round(CLINIC_CONFIG.fixedCosts.fixedCostPerHr * 0.5);
-    const profit = s.price - totalCost;
-    grid.innerHTML += `
-      <div class="service-price-card">
-        <div style="display:flex; justify-content:between; font-weight:700;"><span>${s.emoji || '🦷'} ${k}</span><span style="margin-right:auto; color:var(--teal);">${s.price} ج.م</span></div>
-        <div style="font-size:11px; color:var(--slate);">التكلفة الكلية المقدرة: ${totalCost} ج.م</div>
-        <div style="font-size:11px; color:${profit>=0?'var(--teal)':'var(--coral)'}; font-weight:700;">الربح الصافي المستهدف: ${profit} ج.م</div>
-      </div>`;
+function handleLogout() {
+  document.getElementById("app").classList.remove("visible");
+  document.getElementById("login-screen").style.display = "flex";
+  document.getElementById("login-user").value = "";
+  document.getElementById("login-pass").value = "";
+}
+
+// إضافة موعد جديد إلى قاعدة بيانات Firebase
+function addAppointmentRow() {
+  const name = document.getElementById("ap-name").value.trim();
+  const service = document.getElementById("ap-service").value;
+  
+  if(!name) {
+    alert("الرجاء إدخال اسم المريض أولاً.");
+    return;
+  }
+
+  const appData = {
+    patientName: name,
+    serviceType: service,
+    status: "انتظار",
+    timestamp: new Date().toLocaleString("ar-EG")
+  };
+
+  if(window.FIREBASE_READY && window.FB) {
+    window.FB.addAppointment(appData).then(() => {
+      // إدخال قيد مالي موازي تلقائياً في حسابات الخزنة بقيمة الخدمة المحجوزة
+      window.FB.addFinance({
+        title: `حجز خدمة (${service}) - للمريض ${name}`,
+        amount: CLINIC_CONFIG.services[service] ? CLINIC_CONFIG.services[service].price : 0,
+        type: "وارد"
+      });
+      document.getElementById("ap-name").value = "";
+    }).catch(err => console.error("Firebase Add Error:", err));
+  } else {
+    // خطة بديلة (Fallback) في حال عدم وجود اتصال إنترنت فعال
+    globalAppointments.push(appData);
+    renderAppointments();
+    document.getElementById("ap-name").value = "";
+  }
+}
+
+// بناء وعرض جدول المواعيد بشكل حي ومباشر
+function renderAppointments() {
+  const container = document.getElementById("appointments-list");
+  container.innerHTML = "";
+  
+  globalAppointments.forEach(app => {
+    const tr = document.createElement("tr");
+    tr.style.borderBottom = "1px solid rgba(255,255,255,.05)";
+    tr.style.height = "45px";
+    tr.innerHTML = `
+      <td class="td-name">${app.patientName}</td>
+      <td><span class="badge badge-teal">${app.serviceType}</span></td>
+      <td><span class="badge badge-gold">${app.status || 'انتظار'}</span></td>
+    `;
+    container.appendChild(tr);
   });
 }
 
-function openEditModal(fbId){
-  const item = APPOINTMENTS_DATA.find(a => a.fbId === fbId);
-  if(!item) return;
-  document.getElementById("ed-fbid").value   = fbId;
-  document.getElementById("ed-name").value   = item.patientName;
-  document.getElementById("ed-date").value   = item.date;
-  document.getElementById("ed-time").value   = item.time;
-  document.getElementById("ed-service").value= item.service;
-  document.getElementById("ed-price").value  = item.price;
-  document.getElementById("ed-status").value = item.status;
-  document.getElementById("ed-notes").value  = item.notes || "";
-  document.getElementById("edit-modal").classList.add("open");
-}
-function closeEditModal(){ document.getElementById("edit-modal").classList.remove("open"); }
-function saveEditModalSubmit(){
-  const fbId = document.getElementById("ed-fbid").value;
-  const changes = {
-    patientName: document.getElementById("ed-name").value.trim(),
-    date:        document.getElementById("ed-date").value,
-    time:        document.getElementById("ed-time").value,
-    service:     document.getElementById("ed-service").value,
-    price:       parseFloat(document.getElementById("ed-price").value) || 0,
-    status:      document.getElementById("ed-status").value,
-    notes:       document.getElementById("ed-notes").value.trim(),
-  };
-  window.FB.updateAppointment(fbId, changes).then(() => { closeEditModal(); });
+// بناء وعرض الحسابات داخل الخزنة الواردة
+function renderFinance() {
+  const container = document.getElementById("finance-list");
+  container.innerHTML = "";
+  
+  globalFinance.forEach(fin => {
+    const tr = document.createElement("tr");
+    tr.style.borderBottom = "1px solid rgba(255,255,255,.05)";
+    tr.style.height = "45px";
+    tr.innerHTML = `
+      <td>${fin.title}</td>
+      <td style="font-family:var(--mono); color:var(--teal); font-weight:bold">${fin.amount} ج.م</td>
+      <td><span class="badge badge-green">${fin.type}</span></td>
+    `;
+    container.appendChild(tr);
+  });
 }
 
-// ── INITIALIZATION RUNNER ───────────────────────
-window.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("fi-date").valueAsDate = new Date();
-  document.getElementById("ap-date").valueAsDate = new Date();
+// تحديث الإيرادات ومؤشرات الأداء المالي الحية في واجهة القيادة الأساسية
+function updateDashboardMetrics() {
+  let totalRevenue = 0;
+  globalFinance.forEach(f => totalRevenue += Number(f.amount || 0));
   
-  if (window.FIREBASE_READY) {
-    initAppInfrastructure();
-  } else {
-    window.addEventListener("firebase-ready", () => { initAppInfrastructure(); }, { once: true });
-  }
-});
+  document.getElementById("m-revenue").innerText = `${totalRevenue} ج.م`;
+  document.getElementById("m-count").innerText = globalAppointments.length;
+  
+  // حساب الأرباح التقريبية بعد خصم متوسط التكاليف الثابتة والمتغيرة لكل حالة محجوزة
+  let estimatedCosts = globalAppointments.length * (CLINIC_CONFIG.variableCosts.disposables + CLINIC_CONFIG.variableCosts.anesthesia + CLINIC_CONFIG.variableCosts.waste);
+  let netProfit = totalRevenue - estimatedCosts;
+  
+  document.getElementById("m-profit").innerText = `${Math.max(0, netProfit).toFixed(0)} ج.م`;
+}
+
+// محاكاة واجهة الشات بوت لجمع بيانات العميل آلياً
+function simulateChatUserReply() {
+  const inputEl = document.getElementById("chat-input-field");
+  const msgText = inputEl.value.trim();
+  if(!msgText) return;
+
+  const chatBox = document.getElementById("chat-box");
+  
+  // إضافة رسالة المستخدم المحاكية للواجهة
+  const userRow = document.createElement("div");
+  userRow.className = "msg-bubble msg-user";
+  userRow.innerText = msgText;
+  chatBox.appendChild(userRow);
+  
+  inputEl.value = "";
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  // رد آلي ذكي ومحاكي من البوت بعد ثانية واحدة لإظهار التفاعل مع العميل الحقيقي
+  setTimeout(() => {
+    const botRow = document.createElement("div");
+    botRow.className = "msg-bubble msg-bot";
+    botRow.innerText = "شُكراً لردك! تم استلام بياناتك بنجاح وجاري نقلها فوراً لجداول عيادة الأسنان لمراجعتها وتأكيد الحجز اللحظي معكم.";
+    chatBox.appendChild(botRow);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }, 1000);
+}
 </script>
+
 </body>
 </html>
