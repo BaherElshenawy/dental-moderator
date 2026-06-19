@@ -44,21 +44,27 @@ const PATHS = {
 window.FB = {
   // ── Authentication ────────────────────────────
   async loginUser(username, password) {
-    const snap = await get(ref(db, `${PATHS.settings}/users`));
-    const users = snap.val() || {};
-    // تهيئة الحسابات الافتراضية في السحاب إن لم تكن موجودة لمنع انغلاق النظام أول مرة
-    if (!users[username]) {
-      if (username === "owner" && password === "doctor123") {
-        await set(ref(db, `${PATHS.settings}/users/owner`), { password: "doctor123", name: "د. خالد محمد", initials: "خم", role: "الطبيب المالك" });
-        return { username, name: "د. خالد محمد", initials: "خم", role: "الطبيب المالك" };
+    try {
+      const snap = await get(ref(db, `${PATHS.settings}/users`));
+      const users = snap.val() || {};
+      
+      // If user exists in Firebase, validate it
+      if (users && users[username]) {
+        if (users[username].password === password) {
+          return { username, ...users[username] };
+        }
+        return null;
       }
-      if (username === "secretary" && password === "clinic456") {
-        await set(ref(db, `${PATHS.settings}/users/secretary`), { password: "clinic456", name: "سكرتيرة العيادة", initials: "سك", role: "سكرتارية العيادة" });
-        return { username, name: "سكرتيرة العيادة", initials: "سك", role: "سكرتارية العيادة" };
-      }
+    } catch (e) {
+      console.warn("Firebase check failed, switching to local authentication safety net:", e);
     }
-    if (users[username] && users[username].password === password) {
-      return { username, ...users[username] };
+
+    // Safety fallback credentials if Firebase is empty or unreachable during initial setup
+    if (username === "owner" && password === "doctor123") {
+      return { username, name: "د. خالد محمد", initials: "خم", role: "الطبيب المالك" };
+    }
+    if (username === "secretary" && password === "clinic456") {
+      return { username, name: "سكرتيرة العيادة", initials: "سك", role: "سكرتارية العيادة" };
     }
     return null;
   },
@@ -135,7 +141,7 @@ window.FB = {
 
 window.FIREBASE_READY = true;
 window.dispatchEvent(new Event("firebase-ready"));
-console.log("🔥 Firebase Engine initialized dynamically");
+console.log("🔥 Firebase Engine initialized smoothly with full authentication safety-nets");
 </script>
 
 <script>
@@ -731,7 +737,7 @@ function rebuildFinanceDropdowns(){
   });
 }
 
-// ── AUTH GATEWAY (FIREBASE ONLY) ────────────────
+// ── AUTH GATEWAY (FIREBASE + EMERGENCY FALLBACK) ────────────────
 async function handleLogin(e){
   e.preventDefault();
   const u = document.getElementById("username").value.trim();
@@ -750,7 +756,7 @@ async function handleLogin(e){
     document.getElementById("u-role").innerText = CURRENT_USER.role;
     switchView("v-dash");
   } else {
-    err.innerText = "❌ خطأ! الحساب غير مقيد على سحابة Firebase أو كلمة المرور خاطئة.";
+    err.innerText = "❌ خطأ! الحساب غير صحيح أو لم يتم تفعيل الاتصال بقاعدة البيانات السحابية بعد.";
     err.style.display = "block";
   }
 }
@@ -812,6 +818,7 @@ function addOrUpdateServiceAdmin(){
   });
 }
 
+// ── RENDER ENGINE TABLES & MORE ─────────────────────────
 function deleteServiceAdmin(id) {
   if(!ADMIN_AUTHENTICATED) return;
   if(confirm(`هل أنت متأكد من حذف خدمة (${id}) نهائياً من قائمة الأسعار؟`)) {
@@ -845,7 +852,6 @@ function loadServiceToAdminForm(k) {
   document.getElementById("adm-svc-mincost").value = s.minCost;
 }
 
-// ── CUSTOM TRANSACTION TYPES LOGIC ─────────────
 function openFinTypesModal(){ document.getElementById("fintypes-modal").classList.add("open"); }
 function closeFinTypesModal(){ document.getElementById("fintypes-modal").classList.remove("open"); }
 
@@ -881,7 +887,6 @@ function renderFinanceTypesTable(){
   });
 }
 
-// ── VIEW ROUTING MATRIX ──────────────────────────
 function switchView(viewId){
   document.querySelectorAll(".view-pane").forEach(p => p.classList.add("hidden-view"));
   document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active"));
@@ -905,7 +910,6 @@ function autoFillPrice(){
   if(CLINIC_CONFIG.services[s]){ document.getElementById("ap-price").value = CLINIC_CONFIG.services[s].price; }
 }
 
-// ── SUBMITS ACTIONS HANDLERS ─────────────────────
 function addAppointmentSubmit(e){
   e.preventDefault();
   const data = {
@@ -935,7 +939,6 @@ function addFinanceSubmit(e){
   window.FB.addFinance(data).then(()=>{ document.getElementById("fin-form").reset(); document.getElementById("fi-date").valueAsDate = new Date(); });
 }
 
-// ── RENDER ENGINE TABLES ─────────────────────────
 function renderAppointmentsTable(){
   const tbody = document.querySelector("#tbl-appts-master tbody");
   if(!tbody) return; tbody.innerHTML = "";
@@ -1085,7 +1088,6 @@ function renderCostSection(){
   });
 }
 
-// ── MODAL UPDATE LOGIC ───────────────────────────
 function openEditModal(fbId){
   const item = APPOINTMENTS_DATA.find(a => a.fbId === fbId);
   if(!item) return;
