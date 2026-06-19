@@ -2,7 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/fireba
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-// Your exact web app's Firebase configuration keys
+// Firebase configuration keys
 const firebaseConfig = {
     apiKey: "AIzaSyCOZJWyQOoD2PF6jRPwB0vo14eKiPs0_RA",
     authDomain: "dental-moderator.firebaseapp.com",
@@ -173,7 +173,10 @@ async function switchView(target) {
         if (b.getAttribute('data-target') === target) b.classList.add('active');
     });
 
-    viewLayer.innerHTML = await Views[target]();
+    // Handle asynchronous vs synchronous views safely
+    const contentHTML = typeof Views[target] === 'function' ? await Views[target]() : Views[target];
+    viewLayer.innerHTML = contentHTML;
+    
     if(typeof lucide !== 'undefined') lucide.createIcons();
     attachComponentEventListeners();
 }
@@ -231,10 +234,10 @@ function attachComponentEventListeners() {
 // Authentication Matrix Tracker Loop
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        sidebar.classList.remove('hidden');
+        if (sidebar) sidebar.classList.remove('hidden');
         switchView('dashboard');
     } else {
-        sidebar.classList.add('hidden');
+        if (sidebar) sidebar.classList.add('hidden');
         viewLayer.innerHTML = Views.auth();
         attachComponentEventListeners();
     }
@@ -249,4 +252,4 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     });
 });
 
-document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+document.getElementById('logout-btn')?.addEventListener('click', () => signOut(auth));
