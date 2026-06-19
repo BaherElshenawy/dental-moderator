@@ -1,8 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-// Firebase configuration keys
+// Firebase configuration keys (Firestore remains intact)
 const firebaseConfig = {
     apiKey: "AIzaSyCOZJWyQOoD2PF6jRPwB0vo14eKiPs0_RA",
     authDomain: "dental-moderator.firebaseapp.com",
@@ -15,7 +14,6 @@ const firebaseConfig = {
 
 // Initialize Modules
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 const db = getFirestore(app);
 
 const viewLayer = document.getElementById('view-layer');
@@ -24,11 +22,19 @@ const sidebar = document.getElementById('sidebar');
 let activeView = 'dashboard';
 const ADMIN_TOKEN = "BoB2120";
 
+// ⚠️ LOCAL CREDENTIALS (Insecure - visible in source code)
+const LOCAL_ADMIN_EMAIL = "admin@clinic.com";
+const LOCAL_ADMIN_PASSWORD = "Password123"; 
+
+// Track login state locally since Firebase Auth is removed
+let isLoggedIn = false;
+
 // Complete Feature Engine & Layout Render Matrix
 const Views = {
     auth: () => `
         <div class="auth-wrapper card" style="max-width: 450px; margin: 15vh auto;">
             <h2 style="margin-bottom: 1.5rem; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 1px;">Access Protocol Required</h2>
+            <div id="local-auth-error" style="color: var(--neon-rose); margin-bottom: 1rem; display: none; font-weight: bold;">Invalid Operator ID or Cipher Keypass</div>
             <form id="login-form">
                 <div class="form-group">
                     <label>Terminal Operator ID</label>
@@ -157,8 +163,25 @@ const Views = {
     }
 };
 
+// Core Interface State Render (Replaces Firebase Auth State Tracking Loop)
+function syncAuthState() {
+    if (isLoggedIn) {
+        if (sidebar) sidebar.classList.remove('hidden');
+        switchView('dashboard');
+    } else {
+        if (sidebar) sidebar.classList.add('hidden');
+        viewLayer.innerHTML = Views.auth();
+        attachComponentEventListeners();
+    }
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 // State Machine Navigation Engine (With Token Interceptor)
 async function switchView(target) {
+    if (!isLoggedIn) {
+        target = 'auth';
+    }
+
     if (target === 'admin') {
         const challenge = prompt("Enter Master Technical Sysops Key Token:");
         if (challenge !== ADMIN_TOKEN) {
@@ -185,8 +208,17 @@ async function switchView(target) {
 function attachComponentEventListeners() {
     document.getElementById('login-form')?.addEventListener('submit', (e) => {
         e.preventDefault();
-        signInWithEmailAndPassword(auth, document.getElementById('auth-email').value, document.getElementById('auth-pass').value)
-            .catch(err => alert("Operational Failure: " + err.message));
+        const enteredEmail = document.getElementById('auth-email').value;
+        const enteredPass = document.getElementById('auth-pass').value;
+
+        // Perform local matching checks
+        if (enteredEmail === LOCAL_ADMIN_EMAIL && enteredPass === LOCAL_ADMIN_PASSWORD) {
+            isLoggedIn = true;
+            syncAuthState();
+        } else {
+            const errLabel = document.getElementById('local-auth-error');
+            if (errLabel) errLabel.style.display = 'block';
+        }
     });
 
     document.getElementById('appt-form')?.addEventListener('submit', async (e) => {
@@ -231,19 +263,6 @@ function attachComponentEventListeners() {
     document.getElementById('flush-cache')?.addEventListener('click', () => alert("Mainframe Cache Purged successfully. Operational latency at 0ms."));
 }
 
-// Authentication Matrix Tracker Loop
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        if (sidebar) sidebar.classList.remove('hidden');
-        switchView('dashboard');
-    } else {
-        if (sidebar) sidebar.classList.add('hidden');
-        viewLayer.innerHTML = Views.auth();
-        attachComponentEventListeners();
-    }
-    if(typeof lucide !== 'undefined') lucide.createIcons();
-});
-
 // Event Binding for Sidebar Navigation Control Core
 document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -252,4 +271,10 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     });
 });
 
-document.getElementById('logout-btn')?.addEventListener('click', () => signOut(auth));
+document.getElementById('logout-btn')?.addEventListener('click', () => {
+    isLoggedIn = false;
+    syncAuthState();
+});
+
+// Run Initial App Initialization Status check on load
+syncAuthState();
