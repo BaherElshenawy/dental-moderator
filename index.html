@@ -14,7 +14,8 @@
 <!-- ═══════════════════════════════════════════════════
   🔥 FIREBASE — Replace FIREBASE_CONFIG with your project
 ════════════════════════════════════════════════════ -->
-<script type="module">
+<!-- ═══════════════════════════════════════════════════
+  <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 
@@ -34,7 +35,6 @@ const firebaseConfig = {
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-
   // Make auth methods available globally for your app.js file
   window.auth = auth;
   window.signInWithEmailAndPassword = signInWithEmailAndPassword;
@@ -62,6 +62,7 @@ const firebaseConfig = {
 </div>
 
 <script src="app.js"></script>
+════════════════════════════════════════════════════ -->
 <!-- ═══════════════════════════════════════════════════
   ⚙️ CLINIC CONFIG — All settings managed via Admin Panel (password: BoB2000)
 ════════════════════════════════════════════════════ -->
