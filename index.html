@@ -3,31 +3,491 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DentMod // Core Control Terminal</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <title>Dental Center Management System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --secondary-color: #10b981;
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --danger-color: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: 260px;
+            background-color: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .logo-container i {
+            font-size: 1.8rem;
+            color: var(--primary-color);
+        }
+
+        .logo-container h2 {
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .nav-links {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .nav-item button {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .nav-item button:hover, .nav-item.active button {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        /* Main Content Styling */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        h1 {
+            margin-bottom: 1.5rem;
+            font-size: 2rem;
+        }
+
+        /* Grid Layout for Dashboard */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .stat-info h3 {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .stat-info p {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+        }
+
+        .blue-icon { background: rgba(79, 70, 229, 0.1); color: var(--primary-color); }
+        .green-icon { background: rgba(16, 185, 129, 0.1); color: var(--secondary-color); }
+
+        /* Forms styling */
+        .form-container {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 600px;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 14px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: white;
+            border-radius: 6px;
+            outline: none;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-danger { background-color: var(--danger-color); color: white; }
+
+        /* Tables Styling */
+        .table-container {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 1.5rem;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        .data-table th, .data-table td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table th {
+            background-color: rgba(0,0,0,0.2);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Auth Screen Specific Overlay */
+        .auth-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: var(--bg-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .hidden { display: none !important; }
+    </style>
 </head>
 <body>
-    <div id="app-container">
-        <aside id="sidebar" class="hidden">
-            <div class="logo">
-                <i data-lucide="shield-alert" class="brand-icon"></i>
-                <h2>DentMod<span class="pulse">.</span></h2>
-            </div>
-            <nav>
-                <button class="nav-btn active" data-target="dashboard"><i data-lucide="terminal"></i> Status Deck</button>
-                <button class="nav-btn" data-target="appointments"><i data-lucide="calendar-days"></i> Booking Grid</button>
-                <button class="nav-btn" data-target="patients"><i data-lucide="folder-git"></i> EMR Core</button>
-                <button class="nav-btn admin-lock" data-target="admin"><i data-lucide="sliders"></i> Sysops Admin</button>
-                <button id="logout-btn" class="nav-btn logout"><i data-lucide="power"></i> Kill Session</button>
-            </nav>
-        </aside>
 
-        <main id="main-content">
-            <div id="view-layer"></div>
-        </main>
+    <div id="auth-overlay" class="auth-screen">
+        <div class="form-container" style="width: 100%; max-width: 400px;">
+            <h2 style="margin-bottom: 1.5rem; text-align: center;"><i class="fa-solid :fa-lock"></i> Dental Login Protocol</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label>Operator Email</label>
+                    <input type="email" id="login-email" class="form-control" required placeholder="admin@clinic.com">
+                </div>
+                <div class="form-group">
+                    <label>Cipher Keypass</label>
+                    <input type="password" id="login-password" class="form-control" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Initialize Core Session</button>
+            </form>
+        </div>
     </div>
 
-    <script type="module" src="app.js"></script>
+    <div id="sidebar-container" class="sidebar hidden">
+        <div class="logo-container">
+            <i class="fa-solid :fa-tooth"></i>
+            <h2>DentalCare</h2>
+        </div>
+        <ul class="nav-links">
+            <li class="nav-item active" data-target="dashboard-section"><button><i class="fa-solid :fa-chart-pie"></i> Dashboard</button></li>
+            <li class="nav-item" data-target="appointments-section"><button><i class="fa-solid :fa-calendar-check"></i> Appointments</button></li>
+            <li class="nav-item" data-target="patients-section"><button><i class="fa-solid :fa-users"></i> Patient Base</button></li>
+            <li class="nav-item" data-target="admin-section"><button style="color: var(--danger-color);"><i class="fa-solid :fa-sliders"></i> Sysops Admin</button></li>
+            <li class="nav-item" style="margin-top: auto;"><button id="btn-logout"><i class="fa-solid :fa-power-off"></i> Terminate Session</button></li>
+        </ul>
+    </div>
+
+    <div id="main-container" class="main-content hidden">
+        
+        <div id="dashboard-section" class="view-section active">
+            <h1>System Status Dashboard</h1>
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-info"><h3>Total Appointments</h3><p id="dash-appt-count">0</p></div>
+                    <div class="stat-icon blue-icon"><i class="fa-solid :fa-calendar"></i></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info"><h3>Registered Patients</h3><p id="dash-patient-count">0</p></div>
+                    <div class="stat-icon green-icon"><i class="fa-solid :fa-user-injured"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="appointments-section" class="view-section">
+            <h1>Appointment Registry</h1>
+            <div class="form-container" style="margin-bottom: 2rem;">
+                <h3 style="margin-bottom: 1rem;">Book Appointment Node</h3>
+                <form id="appointment-form">
+                    <div class="form-group"><label>Patient Name</label><input type="text" id="appt-name" class="form-control" required></div>
+                    <div class="form-group"><label>Date Sequence</label><input type="date" id="appt-date" class="form-control" required></div>
+                    <div class="form-group"><label>Time Window</label><input type="time" id="appt-time" class="form-control" required></div>
+                    <button type="submit" class="btn btn-primary">Commit Booking</button>
+                </form>
+            </div>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead><tr><th>Patient Identity</th><th>Date</th><th>Time</th><th>Status</th></tr></thead>
+                    <tbody id="appointments-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="patients-section" class="view-section">
+            <h1>Electronic Medical Records (EMR)</h1>
+            <div class="form-container" style="margin-bottom: 2rem;">
+                <h3 style="margin-bottom: 1rem;">Create Patient Profile</h3>
+                <form id="patient-form">
+                    <div class="form-group"><label>Full Legal Name</label><input type="text" id="pat-name" class="form-control" required></div>
+                    <div class="form-group"><label>Phone Target</label><input type="text" id="pat-phone" class="form-control" required></div>
+                    <div class="form-group"><label>Primary Diagnosis / Case Notes</label><input type="text" id="pat-notes" class="form-control" required></div>
+                    <button type="submit" class="btn btn-primary">Save Profile File</button>
+                </form>
+            </div>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead><tr><th>Full Name</th><th>Phone Line</th><th>Medical Pathology Notes</th></tr></thead>
+                    <tbody id="patients-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="admin-section" class="view-section">
+            <h1>Master Technical Sysops Panel</h1>
+            <p style="color: var(--danger-color); margin-bottom: 2rem; font-weight: bold;">ROOT ACCESS AUTHORIZED</p>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead><tr><th>Data Registry Item</th><th>Management Controls</th></tr></thead>
+                    <tbody id="admin-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+        // Your exact web app's Firebase configuration keys
+        const firebaseConfig = {
+            apiKey: "AIzaSyCOZJWyQOoD2PF6jRPwB0vo14eKiPs0_RA",
+            authDomain: "dental-moderator.firebaseapp.com",
+            projectId: "dental-moderator",
+            storageBucket: "dental-moderator.firebasestorage.app",
+            messagingSenderId: "600867027414",
+            appId: "1:600867027414:web:f6fd0f6dd45bfe00d90c77",
+            measurementId: "G-MV7NXDYG5N"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const ADMIN_TOKEN = "BoB2120";
+
+        // --- AUTHENTICATION STATE TRACKING ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('auth-overlay').classList.add('hidden');
+                document.getElementById('sidebar-container').classList.remove('hidden');
+                document.getElementById('main-container').classList.remove('hidden');
+                loadDashboardData();
+            } else {
+                document.getElementById('auth-overlay').classList.remove('hidden');
+                document.getElementById('sidebar-container').classList.add('hidden');
+                document.getElementById('main-container').classList.add('hidden');
+            }
+        });
+
+        // --- LOGIN ACTION ---
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+            signInWithEmailAndPassword(auth, email, pass).catch(err => alert("Access Denied: " + err.message));
+        });
+
+        // --- LOGOUT ACTION ---
+        document.getElementById('btn-logout').addEventListener('click', () => signOut(auth));
+
+        // --- NAVIGATION SYSTEM CONTROL MATRIX ---
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', async (e) => {
+                const target = item.getAttribute('data-target');
+                
+                if (target === 'admin-section') {
+                    const passChallenge = prompt("Enter Master Technical Sysops Key Token:");
+                    if (passChallenge !== ADMIN_TOKEN) {
+                        alert("SECURITY REJECTION // ACCESS VOID");
+                        return;
+                    }
+                    await loadAdminData();
+                }
+
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+                
+                item.classList.add('active');
+                document.getElementById(target).classList.add('active');
+
+                if (target === 'dashboard-section') loadDashboardData();
+                if (target === 'appointments-section') loadAppointmentsData();
+                if (target === 'patients-section') loadPatientsData();
+            });
+        });
+
+        // --- APPOINTMENTS WRITER ---
+        document.getElementById('appointment-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                await addDoc(collection(db, "appointments"), {
+                    patientName: document.getElementById('appt-name').value,
+                    date: document.getElementById('appt-date').value,
+                    time: document.getElementById('appt-time').value,
+                    status: "Confirmed Active"
+                });
+                document.getElementById('appointment-form').reset();
+                loadAppointmentsData();
+            } catch(err) { alert(err.message); }
+        });
+
+        // --- PATIENTS WRITER ---
+        document.getElementById('patient-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                await addDoc(collection(db, "patients"), {
+                    name: document.getElementById('pat-name').value,
+                    phone: document.getElementById('pat-phone').value,
+                    medicalNote: document.getElementById('pat-notes').value
+                });
+                document.getElementById('patient-form').reset();
+                loadPatientsData();
+            } catch(err) { alert(err.message); }
+        });
+
+        // --- FETCH & DATA RENDERING CORE ---
+        async function loadDashboardData() {
+            const appts = await getDocs(collection(db, "appointments"));
+            const patients = await getDocs(collection(db, "patients"));
+            document.getElementById('dash-appt-count').innerText = appts.size;
+            document.getElementById('dash-patient-count').innerText = patients.size;
+        }
+
+        async function loadAppointmentsData() {
+            const container = document.getElementById('appointments-table-body');
+            container.innerHTML = "";
+            const snap = await getDocs(collection(db, "appointments"));
+            snap.forEach(doc => {
+                const data = doc.data();
+                container.innerHTML += `<tr><td>${data.patientName}</td><td>${data.date}</td><td>${data.time}</td><td style="color:var(--secondary-color); font-weight:bold;">${data.status}</td></tr>`;
+            });
+        }
+
+        async function loadPatientsData() {
+            const container = document.getElementById('patients-table-body');
+            container.innerHTML = "";
+            const snap = await getDocs(collection(db, "patients"));
+            snap.forEach(doc => {
+                const data = doc.data();
+                container.innerHTML += `<tr><td>${data.name}</td><td>${data.phone}</td><td>${data.medicalNote}</td></tr>`;
+            });
+        }
+
+        async function loadAdminData() {
+            const container = document.getElementById('admin-table-body');
+            container.innerHTML = "";
+            const snap = await getDocs(collection(db, "appointments"));
+            snap.forEach(d => {
+                container.innerHTML += `<tr><td>Appointment for ${d.data().patientName}</td><td><button class="btn btn-danger delete-btn" data-id="${d.id}">PURGE FILE</button></td></tr>`;
+            });
+
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    if(confirm("Confirm destructive record deletion?")) {
+                        await deleteDoc(doc(db, "appointments", id));
+                        loadAdminData();
+                    }
+                });
+            });
+        }
+    </script>
 </body>
 </html>
