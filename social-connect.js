@@ -462,4 +462,12 @@
     setTimeout(inject, 600);
   });
 
+  // Auto-load social-footer.js for WhatsApp, Facebook, Instagram icons
+  (function loadSocialFooter() {
+    const script = document.createElement('script');
+    script.src = 'social-footer.js';
+    script.async = true;
+    document.head.appendChild(script);
+  })();
+
 })();
