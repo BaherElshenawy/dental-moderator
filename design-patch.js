@@ -226,23 +226,32 @@
   });
 
   // MutationObserver — catches dynamically rendered content (modals, admin sections)
+  // Guard: disconnect before DOM changes to prevent infinite loop
+  let moTimer = null;
+  const MO_OPTS = { childList: true, subtree: true, characterData: false };
   const mo = new MutationObserver(() => {
-    cleanTitles();
-    cleanButtons();
-    cleanBroadcast();
-    cleanEyeButtons();
-    // Re-clean chatbot if it was just rendered
-    const chatStatus = document.querySelector('.chat-bot-status');
-    if (chatStatus && chatStatus.textContent.includes('Claude')) {
-      chatStatus.textContent = '● متاح الآن';
-    }
+    if (moTimer) return; // already scheduled
+    moTimer = setTimeout(() => {
+      mo.disconnect();
+      cleanTitles();
+      cleanButtons();
+      cleanBroadcast();
+      cleanEyeButtons();
+      // Re-clean chatbot if it was just rendered
+      const chatStatus = document.querySelector('.chat-bot-status');
+      if (chatStatus && chatStatus.textContent.includes('Claude')) {
+        chatStatus.textContent = '● متاح الآن';
+      }
+      mo.observe(document.body, MO_OPTS);
+      moTimer = null;
+    }, 80);
   });
 
   if (document.readyState !== 'loading') {
-    mo.observe(document.body, { childList: true, subtree: true, characterData: false });
+    mo.observe(document.body, MO_OPTS);
   } else {
     document.addEventListener('DOMContentLoaded', () => {
-      mo.observe(document.body, { childList: true, subtree: true, characterData: false });
+      mo.observe(document.body, MO_OPTS);
     });
   }
 
