@@ -1,0 +1,207 @@
+/*
+ * design-patch.css — Professional UI refinements
+ * Add to index.html <head>: <link rel="stylesheet" href="design-patch.css"/>
+ *
+ * What this does:
+ *   - Removes neon glow effects (the biggest "AI built this" visual tell)
+ *   - Improves nav icon alignment for SVGs
+ *   - Makes typography hierarchy cleaner
+ *   - Quiets down decorative elements to look production-grade
+ */
+
+/* ── 1. Remove ALL glow box-shadows ─────────────────────────── */
+
+/* Active nav indicator — remove teal glow from the right-edge bar */
+.nav-item.active::before {
+  box-shadow: none !important;
+}
+
+/* Nav active state — slightly more refined */
+.nav-item.active {
+  background: rgba(0, 212, 170, 0.10) !important;
+}
+
+/* Metric card colored side bar — no glow */
+.metric-card.teal::after,
+.metric-card.gold::after,
+.metric-card.coral::after,
+.metric-card.purple::after {
+  box-shadow: none !important;
+}
+
+/* Primary buttons — no glow on hover */
+.btn-primary:hover {
+  box-shadow: none !important;
+  transform: translateY(-1px) !important;
+  background: #00c49a !important;
+}
+
+/* Login button hover — no glow */
+.login-btn:hover {
+  box-shadow: none !important;
+  transform: none !important;
+  background: #00c49a !important;
+}
+
+/* Chat send button hover — no glow */
+.chat-send:hover {
+  box-shadow: none !important;
+}
+
+/* Login logo emoji — no glow */
+.login-logo-emoji {
+  filter: none !important;
+}
+
+/* Login logo image — softer border glow */
+.login-logo-img {
+  box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.3) !important;
+}
+
+/* ── 2. Remove decorative gradient blobs ─────────────────────── */
+
+/* Sidebar gradient blob (bottom-left) */
+.sidebar::before {
+  display: none !important;
+}
+
+/* Login card gradient blob (top-right) */
+.login-card::before {
+  display: none !important;
+}
+
+/* ── 3. Firebase status dot — no pulsing animation ───────────── */
+.fb-dot.on::before {
+  animation: none !important;
+  box-shadow: none !important;
+}
+
+/* ── 4. SVG icon alignment in nav ───────────────────────────── */
+.nav-icon {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 22px !important;
+  flex-shrink: 0 !important;
+}
+
+.nav-icon svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* ── 5. Cleaner typography ───────────────────────────────────── */
+
+/* Panel titles — slightly less heavy */
+.panel-title {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Modal titles */
+.modal-title {
+  font-size: 15px !important;
+  font-weight: 800 !important;
+}
+
+/* Metric values — numbers look better in default font, mono is too "terminal" */
+.metric-value {
+  font-family: var(--font) !important;
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.5px !important;
+}
+
+/* Topbar title */
+.topbar-title {
+  font-size: 16px !important;
+  font-weight: 800 !important;
+}
+
+/* ── 6. Cleaner admin lock card ──────────────────────────────── */
+.admin-lock-card {
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+}
+
+.admin-lock-card > div:first-child {
+  filter: none !important;
+}
+
+/* ── 7. Modal — slightly less rounded, more product-like ──────── */
+.modal {
+  border-radius: 14px !important;
+}
+
+/* ── 8. Eye button alignment ─────────────────────────────────── */
+.eye-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 36px !important;
+  height: 36px !important;
+}
+
+/* ── 9. Chat send button alignment with SVG ──────────────────── */
+.chat-send {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* ── 10. Quieter card hover transforms ───────────────────────── */
+.patient-card:hover,
+.cost-service-card:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,.2) !important;
+}
+
+/* ── 11. Logout button alignment with SVG ─────────────────────── */
+.logout-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 30px !important;
+  height: 30px !important;
+}
+
+/* ── 12. Chat avatar alignment with SVG ──────────────────────── */
+.chat-avatar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* ── 13. Cleaner scrollbar ───────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px !important;
+  height: 4px !important;
+}
+
+/* ── 14. Field labels — less uppercase-heavy ─────────────────── */
+.field-label {
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: var(--slate) !important;
+  margin-bottom: 6px !important;
+}
+
+/* ── 15. Table header — consistent with field-label ──────────── */
+thead th {
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  font-size: 12px !important;
+}
+
+/* ── 16. Toast notification — no glow ───────────────────────── */
+.toast {
+  box-shadow: 0 4px 20px rgba(0,0,0,.25) !important;
+}
+
+/* ── 17. Demo box hidden (belt + suspenders) ─────────────────── */
+.demo-box {
+  display: none !important;
+}
