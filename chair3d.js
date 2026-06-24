@@ -261,12 +261,14 @@
     });
 
     // ── PAUSE WHEN LOGIN SCREEN HIDDEN ──────────────
+    // The app hides login via class "hidden" (display:none!important) not style attribute
     const observer = new MutationObserver(() => {
-      const hidden = loginScreen.style.display === 'none';
+      const hidden = loginScreen.classList.contains('hidden') ||
+                     loginScreen.style.display === 'none';
       if (hidden && raf) { cancelAnimationFrame(raf); raf = null; }
       else if (!hidden && !raf) animate();
     });
-    observer.observe(loginScreen, { attributes: true, attributeFilter: ['style'] });
+    observer.observe(loginScreen, { attributes: true, attributeFilter: ['style', 'class'] });
 
     // Fade in after first render
     animate();
